@@ -87,7 +87,6 @@ services:
     ulimits:
     volumes:
     environment:
----
 ```
 
 ## Authors
