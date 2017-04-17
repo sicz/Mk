@@ -1,0 +1,4 @@
+# https://git-scm.com/docs/gitignore
+
+# Local Makefile
+docker.local.mk
