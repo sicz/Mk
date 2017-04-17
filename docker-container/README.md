@@ -30,7 +30,7 @@ git clone https://github.com/[*AUTHOR*]/[*REPOSITORY*]
 
 Use command `make` to simplify Docker container development tasks:
 ```bash
-make all        # Destroy running container, build new image, run container and shoe logs
+make all        # Destroy running container, build new image, run container and show logs
 make build      # Build new image
 make rebuild    # Refresh Dockerfile and build new image
 make run        # Run container
@@ -100,7 +100,7 @@ who participated in this project.
 ## License
 
 This project is licensed under the Apache License, Version 2.0 - see the
-[LICENSE.md](LICENSE.md) file for details.
+[LICENSE](LICENSE) file for details.
 
 <!---
 ## Acknowledgments
