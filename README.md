@@ -23,13 +23,14 @@ git clone https://github.com/sicz/Mk
 
 ### Usage
 
-Create new Docker container directory from `docker-container` template directory:
+Create new Docker container directory populated from `docker-container`
+directory:
 ```bash
 make create-docker-project NAME=docker-my-container
 ```
 
 Read carefully and adjust `README.md`, `Makefile`, `LICENSE` and `Dockerfile.tpl`
-files in your new Docker container directory . Interesting parts are enclosed in
+files in your new Docker container directory. Interesting parts are enclosed in
 `[*TEXT*]` brackets.
 
 ## Authors
