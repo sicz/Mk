@@ -132,7 +132,7 @@ docker-shell: docker-start
 	@docker exec $(DOCKER_SHELL_OPTS) `cat $(CONTAINER_ID)` $(DOCKER_SHELL_CMD)
 
 docker-clean:
-	@rm -f $(DOCKER_FILE) $(REFRESHED_AT)
+	rm -f $(DOCKER_FILE) $(DOCKERFILE_REFRESHED_AT)
 
 $(DOCKER_FILE): Makefile $(DOCKER_FILE_TEMPLATE) $(DOCKERFILE_DEPS) $(DOCKERFILE_REFRESHED_AT)
 	@$(ECHO) "$(DOCKER_FILE) refreshed at $(shell cat $(DOCKERFILE_REFRESHED_AT))"; \
