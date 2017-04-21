@@ -8,8 +8,9 @@ ifndef DOCKER_TAG
 $(error Unable to determine Docker image tag. Define DOCKER_TAG.)
 endif
 
-ifneq ($(wildcard ../Mk/docker.local.mk),"")
+ifneq ($(wildcard ../Mk/docker.local.mk),)
 include ../Mk/docker.local.mk
+DOCKERFILE_DEPS		+= ../Mk/docker.local.mk
 endif
 
 BASE_IMAGE_TAG		?= $(DOCKER_TAG)
@@ -132,7 +133,7 @@ docker-shell: docker-start
 	@docker exec $(DOCKER_SHELL_OPTS) `cat $(CONTAINER_ID)` $(DOCKER_SHELL_CMD)
 
 docker-clean:
-	rm -f $(DOCKER_FILE) $(DOCKERFILE_REFRESHED_AT)
+	@rm -f $(DOCKER_FILE) $(DOCKERFILE_REFRESHED_AT)
 
 $(DOCKER_FILE): Makefile $(DOCKER_FILE_TEMPLATE) $(DOCKERFILE_DEPS) $(DOCKERFILE_REFRESHED_AT)
 	@$(ECHO) "$(DOCKER_FILE) refreshed at $(shell cat $(DOCKERFILE_REFRESHED_AT))"; \
