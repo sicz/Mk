@@ -13,6 +13,11 @@ include ../Mk/docker.local.mk
 DOCKERFILE_DEPS		+= ../Mk/docker.local.mk
 endif
 
+ifneq ($(wildcard docker.local.mk),)
+include docker.local.mk
+DOCKERFILE_DEPS		+= docker.local.mk
+endif
+
 BASE_IMAGE_TAG		?= $(DOCKER_TAG)
 
 DOCKER_IMAGE		?= $(DOCKER_PROJECT)/$(DOCKER_NAME):$(DOCKER_TAG)
