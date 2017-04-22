@@ -1,4 +1,4 @@
-FROM [*IMAGE_NAME*]:%%BASE_IMAGE_TAG%%
+FROM [*BASE_IMAGE_NAME*]:%%BASE_IMAGE_TAG%%
 
 ENV \
   org.label-schema.schema-version="1.0" \
