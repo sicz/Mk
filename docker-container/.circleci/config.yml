@@ -12,13 +12,24 @@ jobs:
           command: |
             apk update
             apk add --no-progress git make openssh-client
+            curl -sSL https://github.com/SICZ/Mk/archive/master.tar.gz | tar -xzf -
+            mv Mk-master ~/Mk
       - checkout
       - setup_remote_docker
       - run:
+          name: Remote Docker engine version
+          command: |
+            docker version
+      - run:
+          name: Build Docker image
+          command: |
+            make rebuild
+      - run:
+          name: Run Docker container
+          command: |
+            make run
+            make logs
+      - run:
           name: Run tests
           command: |
-            curl -sSL https://github.com/SICZ/Mk/archive/master.tar.gz | tar -xzf -
-            mv Mk-master ~/Mk
-            make rebuild
-            make run
             env DOCKER_CONTAINER_ID=$(cat .container_id) rspec --format doc
