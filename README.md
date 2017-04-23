@@ -26,12 +26,11 @@ git clone https://github.com/sicz/Mk
 Create new Docker container directory populated from `docker-container`
 directory:
 ```bash
-make create-docker-project NAME=docker-my-container
+make create NAME=docker-my-container
 ```
 
-Read carefully and adjust `README.md`, `Makefile`, `LICENSE` and `Dockerfile.tpl`
-files in your new Docker container directory. Interesting parts are enclosed in
-`[*TEXT*]` brackets.
+Read carefully and adjust all files in your new Docker container directory.
+Interesting parts are enclosed in `[*TEXT*]` brackets.
 
 ## Authors
 

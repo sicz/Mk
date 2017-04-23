@@ -1,0 +1,24 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: sicz/dockerspec:17.03.1-ce
+    working_directory: ~/docker-[*NAME*]
+    environment:
+      - MAKEFLAGS=--no-print-directory
+    steps:
+      - run:
+          name: Set up Environment
+          command: |
+            apk update
+            apk add --no-progress git make openssh-client
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Run tests
+          command: |
+            curl -sSL https://github.com/SICZ/Mk/archive/master.tar.gz | tar -xzf -
+            mv Mk-master ~/Mk
+            make rebuild
+            make run
+            env DOCKER_CONTAINER_ID=$(cat .container_id) rspec --format doc

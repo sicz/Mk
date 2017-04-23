@@ -5,7 +5,7 @@ DOCKER_TAG		= latest
 BASE_IMAGE_TAG		= latest
 
 .PHONY: all build rebuild deploy run up destroy down clean rm start stop restart
-.PHONY: status logs shell
+.PHONY: status logs shell refresh test
 
 all: destroy build deploy logs-tail
 build: docker-build
@@ -19,5 +19,7 @@ status: docker-status
 logs: docker-logs
 logs-tail: docker-logs-tail
 shell: docker-shell
+refresh: docker-refresh
+test: docker-test
 
 include ../Mk/docker.container.mk

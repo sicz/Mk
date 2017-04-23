@@ -5,7 +5,7 @@ ECHO		= /bin/echo
 help:
 	@$(ECHO) "Usage: make create-docker-project NAME=docker-my-project [OVERRIDE=yes]"
 
-create-docker-project:
+create:
 	@if [ -z "$(NAME)" ]; then \
 		$(ECHO) "ERROR: Docker container NAME must be defined"; \
 		$(ECHO); \

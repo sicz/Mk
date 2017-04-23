@@ -8,6 +8,11 @@ ifndef DOCKER_TAG
 $(error Unable to determine Docker image tag. Define DOCKER_TAG.)
 endif
 
+ifneq ($(wildcard ../Mk/docker.config.mk),)
+include ../Mk/docker.config.mk
+DOCKERFILE_DEPS		+= ../Mk/docker.config.mk
+endif
+
 ifneq ($(wildcard ../Mk/docker.local.mk),)
 include ../Mk/docker.local.mk
 DOCKERFILE_DEPS		+= ../Mk/docker.local.mk
