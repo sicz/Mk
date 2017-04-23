@@ -2,3 +2,6 @@
 
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Set GitHub Linguist languages
+Dockerfile.tpl linguist-language=Dockerfile
