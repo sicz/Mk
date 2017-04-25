@@ -5,6 +5,12 @@ It exists to serve as a single endpoint for SICZ projects.**
 
 [*One Paragraph of project description goes here*]
 
+## Contents
+
+This container only contains essential components:
+* [[*BASE IMAGE NAME*]](https://github.com/[*AUTHOR*]/[*BASE IMAGE REPOSITORY*]) provide [*BASE IMAGE DESCRIPTION*].
+* [*PROJECT*]([*PROJECT URL*]) [*PROJECT DESCRIPTION*].
+
 ## Getting started
 
 These instructions will get you a copy of the project up and running on your
@@ -32,7 +38,8 @@ Use command `make` to simplify Docker container development tasks:
 ```bash
 make all        # Destroy running container, build new image, run container and show logs
 make build      # Build new image
-make rebuild    # Refresh Dockerfile and build new image
+make refresh    # Refresh Dockerfile
+make rebuild    # Build new image without caching
 make run        # Run container
 make stop       # Stop running container
 make start      # Start stopped container
@@ -41,23 +48,23 @@ make status     # Show container status
 make logs       # Show container logs
 make logs-tail  # Connect to container logs
 make shell      # Open shell in running container
+make test       # Run tests
 make rm         # Destroy running container
 ```
 
 In `Dockerfile.tpl` you can use placeholders:
-- `%%BASE_IMAGE_TAG%%`
-- `%%DOCKER_PROJECT%%`
-- `%%DOCKER_NAME%%`
-- `%%DOCKER_TAG%%`
-- `%%DOCKER_IMAGE%%`
-- `%%REFRESHED_AT%%`
+* `%%BASE_IMAGE_TAG%%`
+* `%%DOCKER_PROJECT%%`
+* `%%DOCKER_NAME%%`
+* `%%DOCKER_TAG%%`
+* `%%DOCKER_IMAGE%%`
+* `%%REFRESHED_AT%%`
 
 `REFRESHED_AT` timestamp is changed when you run `make rebuild`
 
-Sample `Dockerfile.tpl`:
+You can start with this sample `Dockerfile`:
 ```Dockerfile
-FROM alpine:%%BASE_IMAGE_TAG%%
-ENV REFRESHED_AT=%%REFRESHED_AT%%
+FROM sicz/baseimage-alpine:%%BASE_IMAGE_TAG%%
 ARG TARBALL_URL=https://server/download/package-%%DOCKER_TAG%%.tar.gz
 ...
 ```
@@ -75,7 +82,7 @@ DOCKER_FILE_SUB += MY_VARIABLE_1 MY_VARIABLE_2
 
 [*Add additional notes about how to deploy this on a live system*]
 
-Sample of `docker-compose.yml`:
+You can start with this sample `docker-compose.yml` file:
 ```yaml
 services:
   [*PROJECT*]:
@@ -101,8 +108,6 @@ who participated in this project.
 This project is licensed under the Apache License, Version 2.0 - see the
 [LICENSE](LICENSE) file for details.
 
-<!---
 ## Acknowledgments
 
 [*Hat tip to anyone who's code or inspiration was used*]
---->
