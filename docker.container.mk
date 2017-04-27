@@ -28,7 +28,7 @@ BASE_IMAGE_TAG		?= $(DOCKER_TAG)
 DOCKERSPEC_VERSION	?= 17.03.1-ce
 
 DOCKER_IMAGE		?= $(DOCKER_PROJECT)/$(DOCKER_NAME):$(DOCKER_TAG)
-CONTAINER_NAME		?= $(DOCKER_PROJECT)_$(DOCKER_NAME)
+DOCKER_CONTAINER_NAME	?= $(shell echo "$(DOCKER_PROJECT)_$(DOCKER_NAME)" | tr "-" "_")
 
 DOCKER_FILE		?= Dockerfile
 DOCKER_FILE_TEMPLATE	?= $(DOCKER_FILE).tpl
@@ -37,7 +37,7 @@ DOCKER_FILE_SUB		+= BASE_IMAGE_TAG \
 			   DOCKER_NAME \
 			   DOCKER_TAG \
 			   DOCKER_IMAGE \
-			   CONTAINER_NAME
+			   DOCKER_CONTAINER_NAME
 			#  REFRESHED_AT is replaced separately
 
 # DOCKER_USER		?= root
@@ -52,8 +52,8 @@ else ifdef HTTP_PROXY
 DOCKER_BUILD_OPTS	+= --build-arg http_proxy=$(HTTP_PROXY)
 endif
 
-ifdef CONTAINER_NAME
-DOCKER_RUN_OPTS		+= --name $(CONTAINER_NAME)
+ifdef DOCKER_CONTAINER_NAME
+DOCKER_RUN_OPTS		+= --name $(DOCKER_CONTAINER_NAME)
 endif
 
 ifdef DOCKER_USER
@@ -149,11 +149,13 @@ docker-refresh:
 
 docker-test: docker-start
 	@docker run \
+		$(DOCKER_TEST_OPTS) \
 		-v $(CURDIR)/spec:/spec \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-e DOCKER_CONTAINER_ID=`cat $(DOCKER_CONTAINER_ID)` \
+		--name sicz_dockerspec_$(DOCKER_CONTAINER_NAME) \
 		--rm \
-		sicz/dockerspec:$(DOCKERSPEC_VERSION) ${DOCKERSPEC_OPTS}
+		sicz/dockerspec:$(DOCKERSPEC_VERSION) ${DOCKER_TEST_CMD}
 
 $(DOCKER_FILE): Makefile $(DOCKER_FILE_TEMPLATE) $(DOCKERFILE_DEPS) $(DOCKERFILE_REFRESHED_AT)
 	@$(ECHO) "$(DOCKER_FILE) refreshed at $(shell cat $(DOCKERFILE_REFRESHED_AT))"
