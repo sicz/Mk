@@ -10,8 +10,6 @@ jobs:
       - run:
           name: Set up Environment
           command: |
-            apk update
-            apk add --no-progress git make openssh-client
             curl -sSL https://github.com/SICZ/Mk/archive/master.tar.gz | tar -xzf -
             mv Mk-master ~/Mk
       - checkout
