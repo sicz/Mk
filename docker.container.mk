@@ -8,6 +8,11 @@ ifndef DOCKER_TAG
 $(error Unable to determine Docker image tag. Define DOCKER_TAG.)
 endif
 
+ifneq ($(wildcard README-short.txt),)
+DOCKER_DESCRIPTION	= $(shell cat README-short.txt)
+DOCKERFILE_DEPS		+= README-short.txt
+endif
+
 ifneq ($(wildcard ../Mk/docker.config.mk),)
 include ../Mk/docker.config.mk
 DOCKERFILE_DEPS		+= ../Mk/docker.config.mk
@@ -36,6 +41,7 @@ DOCKER_FILE_SUB		+= BASE_IMAGE_TAG \
 			   DOCKER_PROJECT \
 			   DOCKER_NAME \
 			   DOCKER_TAG \
+			   DOCKER_DESCRIPTION \
 			   DOCKER_IMAGE \
 			   DOCKER_CONTAINER_NAME
 			#  REFRESHED_AT is replaced separately
