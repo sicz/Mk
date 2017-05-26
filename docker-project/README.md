@@ -52,32 +52,6 @@ make test       # Run tests
 make rm         # Destroy running container
 ```
 
-In `Dockerfile.tpl` you can use placeholders:
-* `%%BASE_IMAGE_TAG%%`
-* `%%DOCKER_PROJECT%%`
-* `%%DOCKER_NAME%%`
-* `%%DOCKER_TAG%%`
-* `%%DOCKER_IMAGE%%`
-* `%%REFRESHED_AT%%`
-
-`REFRESHED_AT` timestamp is changed when you run `make rebuild`
-
-You can start with this sample `Dockerfile`:
-```Dockerfile
-FROM sicz/baseimage-alpine:%%BASE_IMAGE_TAG%%
-ARG TARBALL_URL=https://server/download/package-%%DOCKER_TAG%%.tar.gz
-...
-```
-
-In `Makefile` you can define your own placeholders:
-```Makefile
-...
-MY_VARIABLE_1 = something
-MY_VARIABLE_2 = something-other
-DOCKER_FILE_SUB += MY_VARIABLE_1 MY_VARIABLE_2
-...
-```
-
 ## Deployment
 
 [*Add additional notes about how to deploy this on a live system*]

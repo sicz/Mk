@@ -7,7 +7,7 @@ help:
 
 create:
 	@if [ -z "$(NAME)" ]; then \
-		$(ECHO) "ERROR: Docker container NAME must be defined"; \
+		$(ECHO) "ERROR: Docker project NAME must be defined"; \
 		$(ECHO); \
 		$(MAKE) help; \
 		$(ECHO); \
@@ -21,4 +21,4 @@ create:
 		exit 1; \
 	fi
 	@mkdir -p ../$(NAME); \
-	cp -Rpv docker-container ../$(NAME)
+	cp -Rnpv docker-project ../$(NAME)
