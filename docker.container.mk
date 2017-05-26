@@ -16,16 +16,19 @@ endif
 ifneq ($(wildcard ../Mk/docker.config.mk),)
 include ../Mk/docker.config.mk
 DOCKERFILE_DEPS		+= ../Mk/docker.config.mk
+DOCKER_TEST_DEPS	+= ../Mk/docker.config.mk
 endif
 
 ifneq ($(wildcard ../Mk/docker.local.mk),)
 include ../Mk/docker.local.mk
 DOCKERFILE_DEPS		+= ../Mk/docker.local.mk
+DOCKER_TEST_DEPS	+= ../Mk/docker.local.mk
 endif
 
 ifneq ($(wildcard docker.local.mk),)
 include docker.local.mk
 DOCKERFILE_DEPS		+= docker.local.mk
+DOCKER_TEST_DEPS	+= docker.local.mk
 endif
 
 BASE_IMAGE_TAG		?= $(DOCKER_TAG)
@@ -82,7 +85,7 @@ ECHO			= /bin/echo
 
 .PHONY: docker-build docker-rebuild docker-deploy docker-destroy docker-run
 .PHONY: docker-start docker-stop docker-status docker-logs docker-logs-tail
-.PHONY: docker-exec docker-shell docker-refresh docker-test
+.PHONY: docker-exec docker-shell docker-refresh docker-test docker-pull
 
 docker-build: $(DOCKER_FILE)
 	@docker build $(DOCKER_BUILD_OPTS) -f $(DOCKER_FILE) .
@@ -153,7 +156,7 @@ docker-shell: docker-start
 docker-refresh:
 	@rm -f $(DOCKER_FILE) $(DOCKERFILE_REFRESHED_AT)
 
-docker-test: docker-start
+docker-test: docker-start $(DOCKER_TEST_FILE)
 	@docker run \
 		$(DOCKER_TEST_OPTS) \
 		-v $(CURDIR)/spec:/spec \
@@ -162,6 +165,9 @@ docker-test: docker-start
 		--name sicz_dockerspec_$(DOCKER_CONTAINER_NAME) \
 		--rm \
 		sicz/dockerspec:$(DOCKERSPEC_VERSION) ${DOCKER_TEST_CMD}
+
+docker-pull:
+	-@docker pull $(DOCKER_IMAGE)
 
 $(DOCKER_FILE): Makefile $(DOCKER_FILE_TEMPLATE) $(DOCKERFILE_DEPS) $(DOCKERFILE_REFRESHED_AT)
 	@$(ECHO) "$(DOCKER_FILE) refreshed at $(shell cat $(DOCKERFILE_REFRESHED_AT))"
@@ -178,3 +184,7 @@ $(DOCKER_CONTAINER_ID):
 	@$(ECHO) -n "Deploying container: "
 	@docker run $(DOCKER_RUN_OPTS) -d $(DOCKER_IMAGE) $(DOCKER_RUN_CMD) > $(DOCKER_CONTAINER_ID)
 	@cat $(DOCKER_CONTAINER_ID)
+
+.circleci/config.yml: $(DOCKER_TEST_DEPS)
+	@$(ECHO) "Updating dockerspec version to $(DOCKERSPEC_VERSION)"
+	@sed -i '' "s|-[[:space:]]*image:[[:space:]]*sicz/dockerspec:.*|- image: sicz/dosckerspec:$(DOCKERSPEC_VERSION)|" $@
