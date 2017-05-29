@@ -186,5 +186,5 @@ $(DOCKER_CONTAINER_ID):
 	@cat $(DOCKER_CONTAINER_ID)
 
 .circleci/config.yml: $(DOCKER_TEST_DEPS)
-	@$(ECHO) "Updating dockerspec version to $(DOCKERSPEC_VERSION)"
+	@$(ECHO) "Updating CircleCI image to: sicz/dockerspec:$(DOCKERSPEC_VERSION)"
 	@sed -i '' "s|-[[:space:]]*image:[[:space:]]*sicz/dockerspec:.*|- image: sicz/dockerspec:$(DOCKERSPEC_VERSION)|" $@
