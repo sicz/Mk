@@ -1,9 +1,9 @@
 ECHO		= /bin/echo
 
-.PHONY: create-docker-project help
+.PHONY: create help
 
 help:
-	@$(ECHO) "Usage: make create-docker-project NAME=docker-my-project [OVERRIDE=yes]"
+	@$(ECHO) "Usage: make create NAME=docker-my-project [OVERRIDE=yes]"
 
 create:
 	@if [ -z "$(NAME)" ]; then \

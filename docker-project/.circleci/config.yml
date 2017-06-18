@@ -1,33 +1,49 @@
 version: 2
+
+build_image: &build_image
+  docker:
+    - image: sicz/dockerspec:3.6
+  working_directory: ~/${CIRCLE_PROJECT_REPONAME}
+  environment:
+    - MAKEFLAGS=--no-print-directory
+  steps:
+    - run:
+        name: Set up Environment
+        command: |
+          curl -sSL https://github.com/SICZ/Mk/archive/master.tar.gz | tar -xzf -
+          mv Mk-master ~/Mk
+    - checkout
+    - setup_remote_docker
+    - run:
+        name: Remote Docker engine version
+        command: |
+          docker version
+    - run:
+        name: Build Docker image
+        command: |
+          cd ${CIRCLE_STAGE}
+          make rebuild
+    - run:
+        name: Run Docker container
+        command: |
+          make run
+          make logs
+    - run:
+        name: Run tests
+        command: |
+          ln -s ../.rspec .rspec
+          ln -s ../spec spec
+          env DOCKER_CONTAINER_ID=$(cat .container_id) rspec --format doc
+
 jobs:
+  alpine/3.6:
+    <<: *build_image
+  centos/7:
+    <<: *build_image
+
+workflows:
+  version: 2
   build:
-    docker:
-      - image: sicz/dockerspec:[*VERSION*]
-    working_directory: ~/docker-[*NAME*]
-    environment:
-      - MAKEFLAGS=--no-print-directory
-    steps:
-      - run:
-          name: Set up Environment
-          command: |
-            curl -sSL https://github.com/SICZ/Mk/archive/master.tar.gz | tar -xzf -
-            mv Mk-master ~/Mk
-      - checkout
-      - setup_remote_docker
-      - run:
-          name: Remote Docker engine version
-          command: |
-            docker version
-      - run:
-          name: Build Docker image
-          command: |
-            make rebuild
-      - run:
-          name: Run Docker container
-          command: |
-            make run
-            make logs
-      - run:
-          name: Run tests
-          command: |
-            env DOCKER_CONTAINER_ID=$(cat .container_id) rspec --format doc
+    jobs:
+      - alpine/3.6
+      - centos/7

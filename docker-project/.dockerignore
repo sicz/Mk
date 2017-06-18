@@ -1,0 +1,7 @@
+# https://docs.docker.com/engine/reference/builder/#dockerignore-file
+
+# Git Repository
+.git*
+
+# Tests
+**/spec

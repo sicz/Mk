@@ -36,9 +36,8 @@ git clone https://github.com/[*AUTHOR*]/[*REPOSITORY*]
 
 Use command `make` to simplify Docker container development tasks:
 ```bash
-make all        # Destroy running container, build new image, run container and show logs
+make all        # Destroy running container, build new image and run tests
 make build      # Build new image
-make refresh    # Refresh Dockerfile
 make rebuild    # Build new image without caching
 make run        # Run container
 make stop       # Stop running container
@@ -50,6 +49,7 @@ make logs-tail  # Connect to container logs
 make shell      # Open shell in running container
 make test       # Run tests
 make rm         # Destroy running container
+make clean      # Destroy running container and clean
 ```
 
 ## Deployment
@@ -60,7 +60,7 @@ You can start with this sample `docker-compose.yml` file:
 ```yaml
 services:
   [*PROJECT*]:
-    image: IMAGE_NAME
+    image: [*IMAGE_NAME*]
     deploy:
     networks:
     ports:
@@ -74,7 +74,8 @@ services:
 
 * [*AUTHOR*](https://github.com/[*AUTHOR*]) - Initial work.
 
-See also the list of [contributors](https://github.com/[*AUTHOR*]/[*REPOSITORY*]/contributors)
+See also the list of
+[contributors](https://github.com/[*AUTHOR*]/[*REPOSITORY*]/contributors)
 who participated in this project.
 
 ## License
