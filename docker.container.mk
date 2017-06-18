@@ -253,7 +253,7 @@ $(DOCKER_CONTAINER_ID):
 ifneq ($(wildcard $(CIRCLECI_CONFIG_FILE)),)
 .PHONY: $(CIRCLECI_CONFIG_FILE)
 $(CIRCLECI_CONFIG_FILE):
-	@$(ECHO) "Updating CircleCI build image to: $(DOCKER_TEST_IMAGE)"
+	@$(ECHO) "Updating CircleCI Docker image to: $(DOCKER_TEST_IMAGE)"
 	@sed -i '' "s|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_IMAGE_NAME):.*|- image: $(DOCKER_TEST_IMAGE)|" $@
 else
 .PHONY: $(CIRCLECI_CONFIG_FILE)
