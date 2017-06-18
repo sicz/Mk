@@ -24,7 +24,7 @@ VCS_REF			?= $(shell git rev-parse --short HEAD)
 # Last commit timestamp
 ifeq ($(shell date -r 0),Thu Jan  1 01:00:00 CET 1970)
 BUILD_DATE		?= $(shell date -u -r `git log $(VCS_REF) --date=unix --format=%cd` "+%Y-%m-%dT%H:%M:%SZ")
-else ifeq ($(shell date -D @0),Thu Jan  1 01:00:00 CET 1970)
+else ifeq ($(shell date -d @0),Thu Jan  1 01:00:00 CET 1970)
 BUILD_DATE		?= $(shell date -u -d @`git log $(VCS_REF) --date=unix --format=%cd` "+%Y-%m-%dT%H:%M:%SZ")
 else
 BUILD_DATE		?= $(shell git log $(VCS_REF) --date=unix --format=%cI)
