@@ -156,6 +156,8 @@ docker-build:
 
 docker-rebuild:
 	@cd $(DOCKER_BUILD_DIR); \
+	$(ECHO) "Build date: $(BUILD_DATE)"; \
+	$(ECHO) "Git revision: $(VCS_REF)"; \
 	docker build $(DOCKER_BUILD_OPTS) -f $(DOCKER_FILE) --no-cache .
 
 docker-deploy:
