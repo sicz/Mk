@@ -22,12 +22,10 @@ ifeq ($(shell git status --porcelain),)
 # Last commit revision
 VCS_REF			?= $(shell git rev-parse --short HEAD)
 # Last commit timestamp
-ifeq ($(shell date -u -d @0),Thu Jan  1 00:00:00 UTC 1970)
-BUILD_DATE		?= $(shell date -u -d @`git log -1 $(VCS_REF) --date=unix --format=%cd` "+%Y-%m-%dT%H:%M:%SZ")
-else ifeq ($(shell date -u -r 0),Thu Jan  1 00:00:00 UTC 1970)
+ifeq ($(shell uname),Darwin)
 BUILD_DATE		?= $(shell date -u -r `git log -1 $(VCS_REF) --date=unix --format=%cd` "+%Y-%m-%dT%H:%M:%SZ")
 else
-BUILD_DATE		?= $(shell git log -1 $(VCS_REF) --format=%cI)
+BUILD_DATE		?= $(shell date -u -d @`git log -1 $(VCS_REF) --date=unix --format=%cd` "+%Y-%m-%dT%H:%M:%SZ")
 endif
 else
 # Uncommited changes
