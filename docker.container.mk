@@ -54,6 +54,9 @@ BASEIMAGE_TAG		?= $(DOCKER_TAG)
 
 ################################################################################
 
+# Docker Registry
+DOCKER_REGISTRY		?= docker.io
+
 # Docker image name
 DOCKER_IMAGE_NAME	?= $(DOCKER_PROJECT)/$(DOCKER_NAME)
 DOCKER_IMAGE		?= $(DOCKER_IMAGE_NAME):$(DOCKER_TAG)
@@ -252,10 +255,10 @@ docker-clean: docker-destroy
 	@true
 
 docker-pull:
-	@docker pull ${DOCKER_IMAGE}
+	@docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE)
 
 docker-push:
-	@docker push ${DOCKER_IMAGE}
+	@docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE)
 
 $(DOCKER_CONTAINER_ID):
 	@$(ECHO) -n "Deploying container: "; \
