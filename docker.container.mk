@@ -259,7 +259,7 @@ docker-test: docker-start $(CIRCLECI_CONFIG_FILE)
 	fi
 
 docker-clean: docker-destroy
-	@true
+	@find $(DOCKER_HOME_DIR) -type f -name '*~' | xargs rm -f
 
 docker-pull:
 	@docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE)
@@ -278,8 +278,8 @@ $(DOCKER_CONTAINER_ID):
 ifneq ($(wildcard $(CIRCLECI_CONFIG_FILE)),)
 .PHONY: $(CIRCLECI_CONFIG_FILE)
 $(CIRCLECI_CONFIG_FILE):
-	@$(ECHO) "Updating CircleCI Docker image to: $(DOCKER_TEST_IMAGE)"
-	@sed -i'' -e "s|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_IMAGE_NAME):.*|- image: $(DOCKER_TEST_IMAGE)|" $@
+	@$(ECHO) "Updating CircleCI Docker image to: $(DOCKER_TEST_IMAGE)"; \
+	sed -i~ -e "s|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_IMAGE_NAME):.*|- image: $(DOCKER_TEST_IMAGE)|" $@
 else
 .PHONY: $(CIRCLECI_CONFIG_FILE)
 $(CIRCLECI_CONFIG_FILE:)

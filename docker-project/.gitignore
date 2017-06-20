@@ -1,4 +1,7 @@
 # https://git-scm.com/docs/gitignore
 
+# Ignore backup files
+*~
+
 # Info about running containers
 .container_id
