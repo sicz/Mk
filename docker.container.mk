@@ -144,7 +144,7 @@ ECHO			= /bin/echo
 
 .PHONY: docker-build docker-rebuild docker-deploy docker-destroy docker-run
 .PHONY: docker-start docker-stop docker-status docker-logs docker-logs-tail
-.PHONY: docker-exec docker-shell docker-test docker-clean
+.PHONY: docker-exec docker-shell docker-test docker-clean docker-pull docker-push
 
 docker-build:
 	@cd $(DOCKER_BUILD_DIR); \
@@ -250,6 +250,12 @@ docker-test: docker-start $(CIRCLECI_CONFIG_FILE)
 
 docker-clean: docker-destroy
 	@true
+
+docker-pull:
+	@docker pull ${DOCKER_IMAGE}
+
+docker-push:
+	@docker push ${DOCKER_IMAGE}
 
 $(DOCKER_CONTAINER_ID):
 	@$(ECHO) -n "Deploying container: "; \
