@@ -10,6 +10,12 @@ endif
 ifndef DOCKER_TAG
 $(error Unable to determine Docker image tag. Define DOCKER_TAG.)
 endif
+ifndef BASEIMAGE_NAME
+$(error Unable to determine base image name. Define BASEIMAGE_NAME.)
+endif
+ifndef BASEIMAGE_TAG
+$(error Unable to determine base image tag. Define BASEIMAGE_TAG.)
+endif
 
 ################################################################################
 
@@ -147,7 +153,8 @@ ECHO			= /bin/echo
 
 .PHONY: docker-build docker-rebuild docker-deploy docker-destroy docker-run
 .PHONY: docker-start docker-stop docker-status docker-logs docker-logs-tail
-.PHONY: docker-exec docker-shell docker-test docker-clean docker-pull docker-push
+.PHONY: docker-exec docker-shell docker-test docker-clean
+.PHONY: docker-pull docker-pull-baseimage docker-push
 
 docker-build:
 	@cd $(DOCKER_BUILD_DIR); \
@@ -256,6 +263,9 @@ docker-clean: docker-destroy
 
 docker-pull:
 	@docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE)
+
+docker-pull-baseimage:
+	@docker pull $(BASEIMAGE_NAME):$(BASEIMAGE_TAG)
 
 docker-push:
 	@docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE)
