@@ -58,6 +58,9 @@ endif
 # Base image tag
 BASEIMAGE_TAG		?= $(DOCKER_TAG)
 
+# Baseimage name
+BASEIMAGE_IMAGE		?= $(BASEIMAGE_NAME):$(BASEIMAGE_TAG)
+
 ################################################################################
 
 # Docker Registry
@@ -77,10 +80,10 @@ DOCKER_FILE		?= Dockerfile
 # Docker build directory
 DOCKER_BUILD_DIR	?= $(DOCKER_HOME_DIR)
 
-# Build image with name and tag
-ifdef DOCKER_IMAGE
-DOCKER_BUILD_OPTS	+= -t $(DOCKER_IMAGE)
-endif
+# Build image with tags
+DOCKER_BUILD_OPTS	+= -t $(DOCKER_IMAGE) \
+			   $(foreach TAG,$(DOCKER_TAGS),-t $(DOCKER_IMAGE_NAME):$(TAG))
+
 
 # Use http proxy when building image
 ifdef http_proxy
@@ -129,15 +132,12 @@ DOCKER_CONTAINER_ID	?= .container_id
 ################################################################################
 
 # Docker test image
-DOCKER_TEST_PROJECT	?= $(DOCKER_PROJECT)
-DOCKER_TEST_NAME	?= dockerspec
+DOCKER_TEST_NAME	?= sicz/dockerspec
 DOCKER_TEST_TAG		?= 3.6
-DOCKER_TEST_IMAGE_NAME	?= $(DOCKER_TEST_PROJECT)/$(DOCKER_TEST_NAME)
-DOCKER_TEST_IMAGE	?= $(DOCKER_TEST_IMAGE_NAME):$(DOCKER_TEST_TAG)
+DOCKER_TEST_IMAGE	?= $(DOCKER_TEST_NAME):$(DOCKER_TEST_TAG)
 
 DOCKER_TEST_VARS	+= $(DOCKER_BUILD_VARS)
-DOCKER_TEST_OPTS	+= \
-			   -it \
+DOCKER_TEST_OPTS	+= -it \
 			   $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),--env "$(DOCKER_TEST_VAR)=$($(DOCKER_TEST_VAR))")
 
 # Rspec output format
@@ -160,7 +160,7 @@ ECHO			= /bin/echo
 .PHONY: docker-build docker-rebuild docker-deploy docker-destroy docker-run
 .PHONY: docker-start docker-stop docker-status docker-logs docker-logs-tail
 .PHONY: docker-exec docker-shell docker-test docker-rspec docker-clean
-.PHONY: docker-pull docker-pull-baseimage docker-push
+.PHONY: docker-pull docker-pull-baseimage docker-pull-dockerspec docker-push
 
 docker-build:
 	@cd $(DOCKER_BUILD_DIR); \
@@ -168,7 +168,7 @@ docker-build:
 	$(ECHO) "Git revision: $(VCS_REF)"; \
 	docker build $(DOCKER_BUILD_OPTS) -f $(DOCKER_FILE) .
 
-docker-rebuild: docker-pull-baseimage
+docker-rebuild: docker-pull-baseimage docker-pull-dockerspec
 	@cd $(DOCKER_BUILD_DIR); \
 	$(ECHO) "Build date: $(BUILD_DATE)"; \
 	$(ECHO) "Git revision: $(VCS_REF)"; \
@@ -278,7 +278,10 @@ docker-pull:
 	@docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE)
 
 docker-pull-baseimage:
-	@docker pull $(BASEIMAGE_NAME):$(BASEIMAGE_TAG)
+	@docker pull $(BASEIMAGE_IMAGE)
+
+docker-pull-dockerspec:
+	@docker pull $(DOCKER_TEST_IMAGE)
 
 docker-push:
 	@docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE)
@@ -292,7 +295,7 @@ ifneq ($(wildcard $(CIRCLECI_CONFIG_FILE)),)
 .PHONY: $(CIRCLECI_CONFIG_FILE)
 $(CIRCLECI_CONFIG_FILE):
 	@$(ECHO) "Updating CircleCI Docker image to: $(DOCKER_TEST_IMAGE)"; \
-	sed -i~ -e "s|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_IMAGE_NAME):.*|- image: $(DOCKER_TEST_IMAGE)|" $@; \
+	sed -i~ -e "s|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_NAME):.*|- image: $(DOCKER_TEST_IMAGE)|" $@; \
 	rm -f $@~
 else
 .PHONY: $(CIRCLECI_CONFIG_FILE)
