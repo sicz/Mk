@@ -100,6 +100,7 @@ DOCKER_BUILD_VARS	+= BASEIMAGE_NAME \
 			   DOCKER_NAME \
 			   DOCKER_PROJECT \
 			   DOCKER_TAG \
+			   DOCKER_URL \
 			   GITHUB_REPOSITORY \
 			   GITHUB_URL \
 			   GITHUB_USER \
@@ -135,7 +136,7 @@ DOCKER_TEST_IMAGE_NAME	?= $(DOCKER_TEST_PROJECT)/$(DOCKER_TEST_NAME)
 DOCKER_TEST_IMAGE	?= $(DOCKER_TEST_IMAGE_NAME):$(DOCKER_TEST_TAG)
 
 DOCKER_TEST_OPTS	+= \
-			   -t \
+			   -it \
 			   $(foreach DOCKER_TEST_VAR,$(DOCKER_BUILD_VARS),--env "$(DOCKER_TEST_VAR)=$($(DOCKER_TEST_VAR))")
 
 # Docker test home directory
@@ -162,7 +163,7 @@ docker-build:
 	$(ECHO) "Git revision: $(VCS_REF)"; \
 	docker build $(DOCKER_BUILD_OPTS) -f $(DOCKER_FILE) .
 
-docker-rebuild:
+docker-rebuild: docker-pull-baseimage
 	@cd $(DOCKER_BUILD_DIR); \
 	$(ECHO) "Build date: $(BUILD_DATE)"; \
 	$(ECHO) "Git revision: $(VCS_REF)"; \
@@ -279,7 +280,8 @@ ifneq ($(wildcard $(CIRCLECI_CONFIG_FILE)),)
 .PHONY: $(CIRCLECI_CONFIG_FILE)
 $(CIRCLECI_CONFIG_FILE):
 	@$(ECHO) "Updating CircleCI Docker image to: $(DOCKER_TEST_IMAGE)"; \
-	sed -i~ -e "s|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_IMAGE_NAME):.*|- image: $(DOCKER_TEST_IMAGE)|" $@
+	sed -i~ -e "s|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_IMAGE_NAME):.*|- image: $(DOCKER_TEST_IMAGE)|" $@; \
+	rm -f $@~
 else
 .PHONY: $(CIRCLECI_CONFIG_FILE)
 $(CIRCLECI_CONFIG_FILE:)
