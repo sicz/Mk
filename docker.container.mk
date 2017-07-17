@@ -154,7 +154,7 @@ ECHO			= /bin/echo
 
 .PHONY: docker-build docker-rebuild docker-deploy docker-destroy docker-run
 .PHONY: docker-start docker-stop docker-status docker-logs docker-logs-tail
-.PHONY: docker-exec docker-shell docker-test docker-clean
+.PHONY: docker-exec docker-shell docker-test docker-rspec docker-clean
 .PHONY: docker-pull docker-pull-baseimage docker-push
 
 docker-build:
@@ -258,6 +258,9 @@ docker-test: docker-start $(CIRCLECI_CONFIG_FILE)
 			--rm \
 			$(DOCKER_TEST_IMAGE) $(DOCKER_TEST_CMD); \
 	fi
+
+docker-rspec: docker-start
+	env DOCKER_TAG=$(DOCKER_TAG) DOCKER_CONTAINER_ID=$$(cat $${CIRCLE_STAGE:-.}/.container_id) rspec --format doc
 
 docker-clean: docker-destroy
 	@find $(DOCKER_HOME_DIR) -type f -name '*~' | xargs rm -f
