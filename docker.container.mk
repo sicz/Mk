@@ -139,6 +139,10 @@ DOCKER_TEST_OPTS	+= \
 			   -it \
 			   $(foreach DOCKER_TEST_VAR,$(DOCKER_BUILD_VARS),--env "$(DOCKER_TEST_VAR)=$($(DOCKER_TEST_VAR))")
 
+# Rspec output format
+DOCKER_RSPEC_FORMAT	?= progress
+DOCKER_TEST_CMD		?= --format $(DOCKER_RSPEC_FORMAT)
+
 # Docker test home directory
 DOCKER_TEST_DIR		?= $(DOCKER_BUILD_DIR)
 
@@ -260,7 +264,7 @@ docker-test: docker-start $(CIRCLECI_CONFIG_FILE)
 	fi
 
 docker-rspec: docker-start
-	env DOCKER_TAG=$(DOCKER_TAG) DOCKER_CONTAINER_ID=$$(cat $${CIRCLE_STAGE:-.}/.container_id) rspec --format doc
+	@env DOCKER_TAG=$(DOCKER_TAG) DOCKER_CONTAINER_ID=$$(cat $${CIRCLE_STAGE:-.}/.container_id) rspec --format $(DOCKER_RSPEC_FORMAT)
 
 docker-clean: docker-destroy
 	@find $(DOCKER_HOME_DIR) -type f -name '*~' | xargs rm -f
