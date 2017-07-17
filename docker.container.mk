@@ -285,6 +285,7 @@ docker-pull-dockerspec:
 
 docker-push:
 	@docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE)
+	$(foreach TAG,$(DOCKER_TAGS),@docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG))
 
 $(DOCKER_CONTAINER_ID):
 	@$(ECHO) -n "Deploying container: "; \
