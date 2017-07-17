@@ -135,9 +135,10 @@ DOCKER_TEST_TAG		?= 3.6
 DOCKER_TEST_IMAGE_NAME	?= $(DOCKER_TEST_PROJECT)/$(DOCKER_TEST_NAME)
 DOCKER_TEST_IMAGE	?= $(DOCKER_TEST_IMAGE_NAME):$(DOCKER_TEST_TAG)
 
+DOCKER_TEST_VARS	+= $(DOCKER_BUILD_VARS)
 DOCKER_TEST_OPTS	+= \
 			   -it \
-			   $(foreach DOCKER_TEST_VAR,$(DOCKER_BUILD_VARS),--env "$(DOCKER_TEST_VAR)=$($(DOCKER_TEST_VAR))")
+			   $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),--env "$(DOCKER_TEST_VAR)=$($(DOCKER_TEST_VAR))")
 
 # Rspec output format
 DOCKER_RSPEC_FORMAT	?= progress
@@ -264,7 +265,11 @@ docker-test: docker-start $(CIRCLECI_CONFIG_FILE)
 	fi
 
 docker-rspec: docker-start
-	@env DOCKER_TAG=$(DOCKER_TAG) DOCKER_CONTAINER_ID=$$(cat $${CIRCLE_STAGE:-.}/.container_id) rspec --format $(DOCKER_RSPEC_FORMAT)
+	@touch $(DOCKER_CONTAINER_ID); \
+	export $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),$(DOCKER_TEST_VAR)="$($(DOCKER_TEST_VAR))"); \
+	export DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
+	cd $(DOCKER_TEST_DIR); \
+	rspec --format $(DOCKER_RSPEC_FORMAT)
 
 docker-clean: docker-destroy
 	@find $(DOCKER_HOME_DIR) -type f -name '*~' | xargs rm -f
