@@ -133,7 +133,7 @@ DOCKER_CONTAINER_ID	?= .container_id
 
 # Docker test image
 DOCKER_TEST_NAME	?= sicz/dockerspec
-DOCKER_TEST_TAG		?= 3.6
+DOCKER_TEST_TAG		?= latest
 DOCKER_TEST_IMAGE	?= $(DOCKER_TEST_NAME):$(DOCKER_TEST_TAG)
 
 DOCKER_TEST_VARS	+= $(DOCKER_BUILD_VARS)
@@ -168,7 +168,7 @@ docker-build:
 	$(ECHO) "Git revision: $(VCS_REF)"; \
 	docker build $(DOCKER_BUILD_OPTS) -f $(DOCKER_FILE) .
 
-docker-rebuild: docker-pull-baseimage docker-pull-dockerspec
+docker-rebuild: docker-pull-baseimage
 	@cd $(DOCKER_BUILD_DIR); \
 	$(ECHO) "Build date: $(BUILD_DATE)"; \
 	$(ECHO) "Git revision: $(VCS_REF)"; \
@@ -294,12 +294,13 @@ $(DOCKER_CONTAINER_ID):
 
 ifneq ($(wildcard $(CIRCLECI_CONFIG_FILE)),)
 .PHONY: $(CIRCLECI_CONFIG_FILE)
-$(CIRCLECI_CONFIG_FILE):
-	@$(ECHO) "Updating CircleCI Docker image to: $(DOCKER_TEST_IMAGE)"; \
-	sed -i~ -e "s|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_NAME):.*|- image: $(DOCKER_TEST_IMAGE)|" $@; \
-	rm -f $@~
+$(CIRCLECI_CONFIG_FILE): docker-pull-dockerspec
+	@DOCKER_TEST_IMAGE_DIGEST=$(shell docker image inspect $(DOCKER_TEST_IMAGE) --format '{{index .RepoDigests 0}}'); \
+	$(ECHO) "Updating CircleCI Docker executor image to: $${DOCKER_TEST_IMAGE_DIGEST}"; \
+	sed -i~ -E -e "s|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_NAME)(@sha256)?:.*|- image: $${DOCKER_TEST_IMAGE_DIGEST}|" $@; \
+	diff -u $@~ $@ ; rm -f $@~
 else
 .PHONY: $(CIRCLECI_CONFIG_FILE)
-$(CIRCLECI_CONFIG_FILE:)
+$(CIRCLECI_CONFIG_FILE): docker-pull-dockerspec
 	@true
 endif

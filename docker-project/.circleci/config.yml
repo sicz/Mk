@@ -2,7 +2,7 @@ version: 2
 
 build_image: &build_image
   docker:
-    - image: sicz/dockerspec:3.6
+    - image: sicz/dockerspec:latest
   working_directory: ~/${CIRCLE_PROJECT_REPONAME}
   environment:
     - MAKEFLAGS=--no-print-directory
@@ -13,37 +13,22 @@ build_image: &build_image
           curl -sSL https://github.com/SICZ/Mk/archive/master.tar.gz | tar -xzf -
           mv Mk-master ~/Mk
     - checkout
-    - setup_remote_docker
+    - setup_remote_docker:
+        version: 17.06.0-ce
     - run:
         name: Remote Docker engine version
         command: |
           docker version
     - run:
-        name: Build Docker image
+        name: Build image
         command: |
-          cd ${CIRCLE_STAGE}
           make rebuild
     - run:
-        name: Run Docker container
+        name: Run container
         command: |
           make run
           make logs
     - run:
         name: Run tests
         command: |
-          ln -s ../.rspec .rspec
-          ln -s ../spec spec
-          env DOCKER_CONTAINER_ID=$(cat .container_id) rspec --format doc
-
-jobs:
-  alpine/3.6:
-    <<: *build_image
-  centos/7:
-    <<: *build_image
-
-workflows:
-  version: 2
-  build:
-    jobs:
-      - alpine/3.6
-      - centos/7
+          make rspec DOCKER_RSPEC_FORMAT=doc
