@@ -268,7 +268,9 @@ docker-clean: docker-destroy
 	@find $(DOCKER_HOME_DIR) -type f -name '*~' | xargs rm -f
 
 docker-pull:
-	@docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE)
+	@for DOCKER_TAG in $(DOCKER_TAG) $(DOCKER_TAGS); do \
+		docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$${DOCKER_TAG}; \
+	done
 
 docker-pull-baseimage:
 	@docker pull $(BASEIMAGE_IMAGE)
