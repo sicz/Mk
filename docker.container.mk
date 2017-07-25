@@ -131,21 +131,27 @@ DOCKER_CONTAINER_ID	?= .container_id
 
 ################################################################################
 
+# Docker test home directory
+DOCKER_TEST_DIR		?= $(DOCKER_BUILD_DIR)
+
 # Docker test image
 DOCKER_TEST_NAME	?= sicz/dockerspec
 DOCKER_TEST_TAG		?= latest
 DOCKER_TEST_IMAGE	?= $(DOCKER_TEST_NAME):$(DOCKER_TEST_TAG)
 
+# Docker test options and command
 DOCKER_TEST_VARS	+= $(DOCKER_BUILD_VARS)
 DOCKER_TEST_OPTS	+= -it \
-			   $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),--env "$(DOCKER_TEST_VAR)=$($(DOCKER_TEST_VAR))")
+			   -v $(abspath $(DOCKER_TEST_DIR))/.rspec:/.rspec \
+			   -v $(abspath $(DOCKER_TEST_DIR))/spec:/spec \
+			   -v /var/run/docker.sock:/var/run/docker.sock \
+			   $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),-e "$(DOCKER_TEST_VAR)=$($(DOCKER_TEST_VAR))") \
+			   -e DOCKER_CONTAINER_ID=$${DOCKER_CONTAINER_ID} \
+			   --rm
+DOCKER_TEST_CMD		?= docker run $(DOCKER_TEST_OPTS) $(DOCKER_TEST_IMAGE) rspec
 
 # Rspec output format
 DOCKER_RSPEC_FORMAT	?= progress
-DOCKER_TEST_CMD		?= --format $(DOCKER_RSPEC_FORMAT)
-
-# Docker test home directory
-DOCKER_TEST_DIR		?= $(DOCKER_BUILD_DIR)
 
 # CircleCI configuration file
 CIRCLECI_CONFIG_FILE	?= $(DOCKER_HOME_DIR)/.circleci/config.yml
@@ -159,8 +165,8 @@ ECHO			= /bin/echo
 
 .PHONY: docker-build docker-rebuild docker-deploy docker-destroy docker-run
 .PHONY: docker-start docker-stop docker-status docker-logs docker-logs-tail
-.PHONY: docker-exec docker-shell docker-test docker-rspec docker-clean
-.PHONY: docker-pull docker-pull-baseimage docker-pull-dockerspec docker-push
+.PHONY: docker-exec docker-shell docker-test docker-clean
+.PHONY: docker-pull docker-pull-baseimage docker-pull-testimage docker-push
 
 docker-build:
 	@cd $(DOCKER_BUILD_DIR); \
@@ -251,25 +257,12 @@ docker-shell: docker-start
 
 docker-test: docker-start $(CIRCLECI_CONFIG_FILE)
 	@touch $(DOCKER_CONTAINER_ID); \
-	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-		docker run \
-			$(DOCKER_TEST_OPTS) \
-			-v $(abspath $(DOCKER_TEST_DIR))/.rspec:/.rspec \
-			-v $(abspath $(DOCKER_TEST_DIR))/spec:/spec \
-			-v /var/run/docker.sock:/var/run/docker.sock \
-			-e DOCKER_CONTAINER_ID=$${DOCKER_CONTAINER_ID} \
-			--name sicz_dockerspec_$${DOCKER_CONTAINER_ID} \
-			--rm \
-			$(DOCKER_TEST_IMAGE) $(DOCKER_TEST_CMD); \
-	fi
-
-docker-rspec: docker-start
-	@touch $(DOCKER_CONTAINER_ID); \
-	export $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),$(DOCKER_TEST_VAR)="$($(DOCKER_TEST_VAR))"); \
 	export DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-	cd $(DOCKER_TEST_DIR); \
-	rspec --format $(DOCKER_RSPEC_FORMAT)
+	export $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),$(DOCKER_TEST_VAR)="$($(DOCKER_TEST_VAR))"); \
+	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
+		cd $(DOCKER_TEST_DIR); \
+		$(DOCKER_TEST_CMD) --format $(DOCKER_RSPEC_FORMAT); \
+	fi
 
 docker-clean: docker-destroy
 	@find $(DOCKER_HOME_DIR) -type f -name '*~' | xargs rm -f
@@ -280,7 +273,7 @@ docker-pull:
 docker-pull-baseimage:
 	@docker pull $(BASEIMAGE_IMAGE)
 
-docker-pull-dockerspec:
+docker-pull-testimage:
 	@docker pull $(DOCKER_TEST_IMAGE)
 
 docker-push:
@@ -292,15 +285,23 @@ $(DOCKER_CONTAINER_ID):
 	docker run $(DOCKER_RUN_OPTS) -d $(DOCKER_IMAGE) $(DOCKER_RUN_CMD) > $(DOCKER_CONTAINER_ID); \
 	cat $(DOCKER_CONTAINER_ID)
 
+################################################################################
+
+.PHONY: ci-update-config
+
 ifneq ($(wildcard $(CIRCLECI_CONFIG_FILE)),)
-.PHONY: $(CIRCLECI_CONFIG_FILE)
-$(CIRCLECI_CONFIG_FILE): docker-pull-dockerspec
-	@DOCKER_TEST_IMAGE_DIGEST=$(shell docker image inspect $(DOCKER_TEST_IMAGE) --format '{{index .RepoDigests 0}}'); \
-	$(ECHO) "Updating CircleCI Docker executor image to: $${DOCKER_TEST_IMAGE_DIGEST}"; \
-	sed -i~ -E -e "s|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_NAME)(@sha256)?:.*|- image: $${DOCKER_TEST_IMAGE_DIGEST}|" $@; \
-	diff -u $@~ $@ ; rm -f $@~
+ci-update-config: docker-pull-testimage
+	@DOCKER_TEST_IMAGE_DIGEST="$(shell docker image inspect $(DOCKER_TEST_IMAGE) --format '{{index .RepoDigests 0}}')"; \
+	sed -i~ -E -e 's|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_NAME)(@sha256)?:.*|- image: $${DOCKER_TEST_IMAGE_DIGEST}|' $(CIRCLECI_CONFIG_FILE); \
+	if diff $(CIRCLECI_CONFIG_FILE)~ $(CIRCLECI_CONFIG_FILE) > /dev/null; then \
+		$(ECHO) "CircleCI configuration is up-to-date"; \
+	else \
+		$(ECHO) "Updating CircleCI Docker executor image to: $${DOCKER_TEST_IMAGE_DIGEST}"; \
+	fi; \
+	rm -f $(CIRCLECI_CONFIG_FILE)~
 else
-.PHONY: $(CIRCLECI_CONFIG_FILE)
-$(CIRCLECI_CONFIG_FILE): docker-pull-dockerspec
+ci-update-config:
 	@true
 endif
+
+################################################################################
