@@ -166,7 +166,8 @@ ECHO			= /bin/echo
 .PHONY: docker-build docker-rebuild docker-deploy docker-destroy docker-run
 .PHONY: docker-start docker-stop docker-status docker-logs docker-logs-tail
 .PHONY: docker-exec docker-shell docker-test docker-clean
-.PHONY: docker-pull docker-pull-baseimage docker-pull-testimage docker-push
+.PHONY: docker-pull docker-pull-baseimage docker-pull-testimage docker-pull-all
+.PHONY: docker-push
 
 docker-build:
 	@cd $(DOCKER_BUILD_DIR); \
@@ -277,6 +278,12 @@ docker-pull-baseimage:
 
 docker-pull-testimage:
 	@docker pull $(DOCKER_TEST_IMAGE)
+
+docker-pull-all:
+	@for SUBDIR in . $(DOCKER_SUBDIR); do \
+		cd $(abspath $(DOCKER_HOME_DIR))/$${SUBDIR}; \
+		$(MAKE) docker-pull-baseimage docker-pull docker-pull-testimage; \
+	done
 
 docker-push:
 	@docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE); \
