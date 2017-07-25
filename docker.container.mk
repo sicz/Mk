@@ -292,7 +292,7 @@ $(DOCKER_CONTAINER_ID):
 ifneq ($(wildcard $(CIRCLECI_CONFIG_FILE)),)
 ci-update-config: docker-pull-testimage
 	@DOCKER_TEST_IMAGE_DIGEST="$(shell docker image inspect $(DOCKER_TEST_IMAGE) --format '{{index .RepoDigests 0}}')"; \
-	sed -i~ -E -e 's|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_NAME)(@sha256)?:.*|- image: $${DOCKER_TEST_IMAGE_DIGEST}|' $(CIRCLECI_CONFIG_FILE); \
+	sed -i~ -E -e "s|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_NAME)(@sha256)?:.*|- image: $${DOCKER_TEST_IMAGE_DIGEST}|" $(CIRCLECI_CONFIG_FILE); \
 	if diff $(CIRCLECI_CONFIG_FILE)~ $(CIRCLECI_CONFIG_FILE) > /dev/null; then \
 		$(ECHO) "CircleCI configuration is up-to-date"; \
 	else \
