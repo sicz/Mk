@@ -186,7 +186,7 @@ docker-deploy:
 	@$(MAKE) docker-start
 
 docker-destroy:
-	@touch "$(DOCKER_CONTAINER_ID)"; \
+	@touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
 		if [ -n "$$(docker container ps --all --quiet --filter=id=$${DOCKER_CONTAINER_ID})" ]; then \
@@ -194,12 +194,12 @@ docker-destroy:
 			docker container rm $(DOCKER_REMOVE_OPTS) -f $${DOCKER_CONTAINER_ID}; \
 		fi; \
 	fi; \
-	rm -f "$(DOCKER_CONTAINER_ID)"
+	rm -f $(DOCKER_CONTAINER_ID)
 
 docker-run: $(DOCKER_CONTAINER_ID)
 
 docker-start: docker-run
-	@touch "$(DOCKER_CONTAINER_ID)"; \
+	@touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
 		if [ -z "$$(docker container ps --quiet --filter=id=$${DOCKER_CONTAINER_ID})" ]; then \
@@ -209,7 +209,7 @@ docker-start: docker-run
 	fi
 
 docker-stop:
-	@touch "$(DOCKER_CONTAINER_ID)"; \
+	@touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
 		if [ -n "$$(docker container ps --quiet --filter=id=$${DOCKER_CONTAINER_ID})" ]; then \
@@ -219,7 +219,7 @@ docker-stop:
 	fi
 
 docker-status:
-	@if [ -e "$(DOCKER_CONTAINER_ID)" ]; then \
+	@if [ -e $(DOCKER_CONTAINER_ID) ]; then \
 		DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 		if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
 			docker container ps --all --filter=id=$${DOCKER_CONTAINER_ID}; \
@@ -227,7 +227,7 @@ docker-status:
 	fi
 
 docker-logs:
-	@if [ -e "$(DOCKER_CONTAINER_ID)" ]; then \
+	@if [ -e $(DOCKER_CONTAINER_ID) ]; then \
 		DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 		if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
 			docker logs $(DOCKER_LOGS_OPTS) $${DOCKER_CONTAINER_ID}; \
@@ -235,7 +235,7 @@ docker-logs:
 	fi
 
 docker-logs-tail:
-	@if [ -e "$(DOCKER_CONTAINER_ID)" ]; then \
+	@if [ -e $(DOCKER_CONTAINER_ID) ]; then \
 		DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 		if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
 			docker logs $(DOCKER_LOGS_OPTS) -f $${DOCKER_CONTAINER_ID}; \
@@ -243,7 +243,7 @@ docker-logs-tail:
 	fi
 
 docker-exec: docker-start
-	@touch "$(DOCKER_CONTAINER_ID)"; \
+	@touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
 		docker exec $(DOCKER_EXEC_OPTS) $${DOCKER_CONTAINER_ID} $(DOCKER_EXEC_CMD); \
