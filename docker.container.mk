@@ -271,6 +271,7 @@ docker-clean: docker-destroy
 docker-pull:
 	@for DOCKER_TAG in $(DOCKER_TAG) $(DOCKER_TAGS); do \
 		docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$${DOCKER_TAG}; \
+		$(ECHO); \
 	done
 
 docker-pull-baseimage:
