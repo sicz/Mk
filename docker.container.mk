@@ -151,7 +151,7 @@ DOCKER_TEST_OPTS	+= -it \
 DOCKER_TEST_CMD		?= docker run $(DOCKER_TEST_OPTS) $(DOCKER_TEST_IMAGE) rspec
 
 # Rspec output format
-DOCKER_RSPEC_FORMAT	?= progress
+DOCKER_RSPEC_FORMAT	?= documentation
 
 # CircleCI configuration file
 CIRCLECI_CONFIG_FILE	?= $(DOCKER_HOME_DIR)/.circleci/config.yml
