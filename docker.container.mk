@@ -279,10 +279,10 @@ docker-pull-baseimage:
 docker-pull-testimage:
 	@docker pull $(DOCKER_TEST_IMAGE)
 
-docker-pull-all:
-	@for SUBDIR in . $(DOCKER_SUBDIR); do \
+docker-pull-all: docker-pull
+	@for SUBDIR in $(DOCKER_SUBDIR); do \
 		cd $(abspath $(DOCKER_HOME_DIR))/$${SUBDIR}; \
-		$(MAKE) docker-pull-baseimage docker-pull docker-pull-testimage; \
+		$(MAKE) docker-pull; \
 	done
 
 docker-push:
