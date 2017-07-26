@@ -35,7 +35,7 @@ BUILD_DATE		?= $(shell date -u -d @`git log -1 $(VCS_REF) --date=unix --format=%
 endif
 else
 # Uncommited changes
-VCS_REF			?= $(shell git rev-parse --short HEAD)-dev
+VCS_REF			?= $(shell git rev-parse --short HEAD)-devel
 # Build date contains only date so subsequent builds are cached
 BUILD_DATE		?= $(shell date -u "+%Y-%m-%d")
 endif
@@ -117,6 +117,12 @@ ifdef DOCKER_USER
 DOCKER_RUN_OPTS		+= --user $(DOCKER_USER)
 DOCKER_EXEC_OPTS	+= --user $(DOCKER_USER)
 DOCKER_SHELL_OPTS	+= --user $(DOCKER_USER)
+endif
+
+# Docker container name
+DOCKER_CONTAINER_NAME	?= $(shell echo "$(DOCKER_IMAGE)_`openssl rand -hex 3`" | sed -E "s/[^[:alnum:]_]+/_/g")
+ifdef DOCKER_CONTAINER_NAME
+DOCKER_RUN_OPTS		+= --name $(DOCKER_CONTAINER_NAME)
 endif
 
 # Docker exec command
