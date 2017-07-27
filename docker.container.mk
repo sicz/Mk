@@ -394,9 +394,7 @@ docker-pull-baseimage:
 	@docker pull $(BASEIMAGE_IMAGE)
 
 docker-pull-testimage:
-	@if [ -n "$(DOCKER_TEST_IMAGE)" ]; then \
-		docker pull $(DOCKER_TEST_IMAGE); \
-	fi
+	docker pull $(DOCKER_TEST_IMAGE); \
 
 docker-pull-all: docker-pull
 	@for SUBDIR in $(DOCKER_SUBDIR); do \
