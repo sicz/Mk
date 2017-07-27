@@ -1,29 +1,18 @@
 ################################################################################
 
-# Required variables
-ifndef DOCKER_PROJECT
-$(error Unable to determine Docker project name. Define DOCKER_PROJECT.)
-endif
-ifndef DOCKER_NAME
-$(error Unable to determine Docker image name. Define DOCKER_NAME.)
-endif
-ifndef DOCKER_TAG
-$(error Unable to determine Docker image tag. Define DOCKER_TAG.)
-endif
-ifndef BASEIMAGE_NAME
-$(error Unable to determine base image name. Define BASEIMAGE_NAME.)
-endif
-ifndef BASEIMAGE_TAG
-$(error Unable to determine base image tag. Define BASEIMAGE_TAG.)
-endif
-
-################################################################################
-
 # GitHub repository
-GITHUB_USER		?= $(DOCKER_PROJECT)
-GITHUB_REPOSITORY	?= docker-$(DOCKER_NAME)
-GITHUB_URL		?= https://github.org/$(GITHUB_USER)/$(GITHUB_REPOSITORY)
+# git config --get remote.origin.url
+# - https://github.com/sicz/docker-baseimage.git
+# - git@github.com:sicz/docker-baseimage.git
+GITHUB_URL		?= $(shell git config --get remote.origin.url | sed -E -e "s|^git@github.com:|https://github.com/|" -e "s|\.git$$||")
+ifeq ($(GITHUB_URL),)
+$(error "Not a git repository (or any of the parent directories)")
+endif
 
+GITHUB_USER		?= $(shell basename $$(dirname $(GITHUB_URL)))
+GITHUB_REPOSITORY	?= $(shell basename $(GITHUB_URL))
+
+# All modifications are commited
 ifeq ($(shell git status --porcelain),)
 # Last commit revision
 VCS_REF			?= $(shell git rev-parse --short HEAD)
@@ -33,6 +22,8 @@ BUILD_DATE		?= $(shell date -u -r `git log -1 $(VCS_REF) --date=unix --format=%c
 else
 BUILD_DATE		?= $(shell date -u -d @`git log -1 $(VCS_REF) --date=unix --format=%cd` "+%Y-%m-%dT%H:%M:%SZ")
 endif
+
+# Modifications are not commited
 else
 # Uncommited changes
 VCS_REF			?= $(shell git rev-parse --short HEAD)-devel
@@ -63,8 +54,10 @@ BASEIMAGE_IMAGE		?= $(BASEIMAGE_NAME):$(BASEIMAGE_TAG)
 
 ################################################################################
 
-# Docker Registry
+# Docker name
 DOCKER_REGISTRY		?= docker.io
+DOCKER_PROJECT		?= $(GITHUB_USER)
+DOCKER_NAME		?= $(shell echo $(GITHUB_REPOSITORY) | sed -E -e "s|^docker-||")
 
 # Docker image name
 DOCKER_IMAGE_NAME	?= $(DOCKER_PROJECT)/$(DOCKER_NAME)
@@ -119,12 +112,6 @@ DOCKER_EXEC_OPTS	+= --user $(DOCKER_USER)
 DOCKER_SHELL_OPTS	+= --user $(DOCKER_USER)
 endif
 
-# Docker container name
-DOCKER_CONTAINER_NAME	?= $(shell echo "$(DOCKER_IMAGE)_`openssl rand -hex 3`" | sed -E "s/[^[:alnum:]_]+/_/g")
-ifdef DOCKER_CONTAINER_NAME
-DOCKER_RUN_OPTS		+= --name $(DOCKER_CONTAINER_NAME)
-endif
-
 # Docker exec command
 DOCKER_EXEC_CMD		?= /bin/true
 
@@ -133,7 +120,8 @@ DOCKER_SHELL_OPTS	+= --interactive --tty
 DOCKER_SHELL_CMD	?= /bin/bash
 
 # Running container id
-DOCKER_CONTAINER_ID	?= .container_id
+DOCKER_CONTAINER_ID	:= .container_id
+DOCKER_CONTAINER_NAME	:= $(shell echo "$(DOCKER_IMAGE)_`openssl rand -hex 3`" | sed -E "s/[^[:alnum:]_]+/_/g")
 
 ################################################################################
 
@@ -145,16 +133,19 @@ DOCKER_TEST_NAME	?= sicz/dockerspec
 DOCKER_TEST_TAG		?= latest
 DOCKER_TEST_IMAGE	?= $(DOCKER_TEST_NAME):$(DOCKER_TEST_TAG)
 
-# Docker test options and command
+# Docker test options, command and args
 DOCKER_TEST_VARS	+= $(DOCKER_BUILD_VARS)
-DOCKER_TEST_OPTS	+= -it \
+DOCKER_TEST_OPTS	?= --interactive \
+			   --tty \
+			   --name $${DOCKER_TEST_ID} \
 			   -v $(abspath $(DOCKER_TEST_DIR))/.rspec:/.rspec \
 			   -v $(abspath $(DOCKER_TEST_DIR))/spec:/spec \
 			   -v /var/run/docker.sock:/var/run/docker.sock \
 			   $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),-e "$(DOCKER_TEST_VAR)=$($(DOCKER_TEST_VAR))") \
 			   -e DOCKER_CONTAINER_ID=$${DOCKER_CONTAINER_ID} \
 			   --rm
-DOCKER_TEST_CMD		?= docker run $(DOCKER_TEST_OPTS) $(DOCKER_TEST_IMAGE) rspec
+DOCKER_TEST_CMD		?= rspec
+DOCKER_TEST_ARGS	?= --format $(DOCKER_RSPEC_FORMAT)
 
 # Rspec output format
 DOCKER_RSPEC_FORMAT	?= documentation
@@ -164,16 +155,93 @@ CIRCLECI_CONFIG_FILE	?= $(DOCKER_HOME_DIR)/.circleci/config.yml
 
 ################################################################################
 
-# Useful commands
 ECHO			= /bin/echo
 
 ################################################################################
 
-.PHONY: docker-build docker-rebuild docker-deploy docker-destroy docker-run
-.PHONY: docker-start docker-stop docker-status docker-logs docker-logs-tail
-.PHONY: docker-exec docker-shell docker-test docker-clean
+# Required variables
+ifndef DOCKER_PROJECT
+$(error Unable to determine Docker project name. Define DOCKER_PROJECT.)
+endif
+ifndef DOCKER_NAME
+$(error Unable to determine Docker image name. Define DOCKER_NAME.)
+endif
+ifndef DOCKER_TAG
+$(error Unable to determine Docker image tag. Define DOCKER_TAG.)
+endif
+ifndef BASEIMAGE_NAME
+$(error Unable to determine base image name. Define BASEIMAGE_NAME.)
+endif
+ifndef BASEIMAGE_TAG
+$(error Unable to determine base image tag. Define BASEIMAGE_TAG.)
+endif
+
+################################################################################
+
+.PHONY: github-info
+
+define GITHUB_INFO
+GITHUB_URL:		$(GITHUB_URL)
+GITHUB_USER:		$(GITHUB_USER)
+GITHUB_REPOSITORY:	$(GITHUB_REPOSITORY)
+
+endef
+export GITHUB_INFO
+
+github-info:
+	@$(ECHO) "$${GITHUB_INFO}"
+
+################################################################################
+
+.PHONY: docker-info docker-build docker-rebuild docker-deploy docker-destroy
+.PHONY: docker-run docker-start docker-stop docker-exec docker-shell
+.PHONY: docker-status docker-logs docker-logs-tail docker-test docker-clean
 .PHONY: docker-pull docker-pull-baseimage docker-pull-testimage docker-pull-all
 .PHONY: docker-push
+
+define DOCKER_INFO
+BASEIMAGE_NAME:		$(BASEIMAGE_NAME)
+BASEIMAGE_TAG:		$(BASEIMAGE_TAG)
+
+DOCKER_REGISTRY:	$(DOCKER_REGISTRY)
+DOCKER_PROJECT:		$(DOCKER_PROJECT)
+DOCKER_NAME:		$(DOCKER_NAME)
+DOCKER_TAG:		$(DOCKER_TAG)
+DOCKER_TAGS:		$(DOCKER_TAGS)
+DOCKER_IMAGE:		$(DOCKER_IMAGE)
+
+DOCKER_FILE:		$(DOCKER_FILE)
+
+CURDIR			$(CURDIR)
+DOCKER_HOME_DIR:	$(abspath $(DOCKER_HOME_DIR))
+DOCKER_BUILD_DIR:	$(abspath $(DOCKER_BUILD_DIR))
+DOCKER_TEST_DIR:	$(abspath $(DOCKER_TEST_DIR))
+
+DOCKER_BUILD_VARS:	$(DOCKER_BUILD_VARS)
+DOCKER_BUILD_OPTS:	$(DOCKER_BUILD_OPTS)
+
+DOCKER_RUN_OPTS:	$(DOCKER_RUN_OPTS)
+DOCKER_RUN_CMD:		$(DOCKER_RUN_CMD)
+
+DOCKER_EXEC_OPTS:	$(DOCKER_EXEC_OPTS)
+DOCKER_EXEC_CMD:	$(DOCKER_EXEC_CMD)
+
+DOCKER_SHELL_OPTS:	$(DOCKER_SHELL_OPTS)
+DOCKER_SHELL_CMD:	$(DOCKER_SHELL_CMD)
+
+DOCKER_TEST_NAME:	$(DOCKER_TEST_NAME)
+DOCKER_TEST_TAG:	$(DOCKER_TEST_TAG)
+DOCKER_TEST_IMAGE:	$(DOCKER_TEST_IMAGE)
+DOCKER_TEST_VARS:	$(DOCKER_TEST_VARS)
+DOCKER_TEST_OPTS:	$(DOCKER_TEST_OPTS)
+DOCKER_TEST_CMD:	$(DOCKER_TEST_CMD)
+DOCKER_TEST_ARGS:	$(DOCKER_TEST_ARGS)
+
+endef
+export DOCKER_INFO
+
+docker-info:
+	@$(ECHO) "$${DOCKER_INFO}" | sed -E -e $$'s/ +-/\\\n\\\t\\\t\\\t-/g' -e $$'s/([A-Z]) ([A-Z])/\\1\\\n\\\t\\\t\\\t\\2/g'
 
 docker-build:
 	@cd $(DOCKER_BUILD_DIR); \
@@ -189,63 +257,86 @@ docker-rebuild: docker-pull-baseimage
 
 docker-deploy:
 	@$(MAKE) docker-destroy
-	@$(MAKE) docker-start
+	@$(MAKE) docker-start DOCKER_CONTAINER_NAME=$(DOCKER_CONTAINER_NAME)
 
 docker-destroy:
-	@touch $(DOCKER_CONTAINER_ID); \
-	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-		if [ -n "$$(docker container ps --all --quiet --filter=id=$${DOCKER_CONTAINER_ID})" ]; then \
-			$(ECHO) -n "Destroing container: "; \
-			docker container rm $(DOCKER_REMOVE_OPTS) -f $${DOCKER_CONTAINER_ID}; \
+	@for DOCKER_CONTAINER_ID_FILE in $$(ls .container_* 2>/dev/null | tr '\n' ' '); do \
+		DOCKER_CONTAINER_ID="$$(cat $${DOCKER_CONTAINER_ID_FILE})"; \
+		if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
+			if [ -n "$$(docker container ps --all --quiet --filter name=^/$${DOCKER_CONTAINER_ID}$$)" ]; then \
+				$(ECHO) -n "Destroing container: "; \
+				docker container rm $(DOCKER_REMOVE_OPTS) -f $${DOCKER_CONTAINER_ID} > /dev/null; \
+				$(ECHO) "$${DOCKER_CONTAINER_ID}"; \
+			fi; \
 		fi; \
-	fi; \
-	rm -f $(DOCKER_CONTAINER_ID)
+		rm -f $${DOCKER_CONTAINER_ID_FILE}; \
+	done
 
-docker-run: $(DOCKER_CONTAINER_ID)
+docker-run: $(DOCKER_RUN_HELPER) $(DOCKER_CONTAINER_ID)
+
+$(DOCKER_CONTAINER_ID):
+	@$(ECHO) -n "Deploying container: "; \
+	echo $(DOCKER_CONTAINER_NAME) > $(DOCKER_CONTAINER_ID); \
+	docker run $(DOCKER_RUN_OPTS) --name $(DOCKER_CONTAINER_NAME) -d $(DOCKER_IMAGE) $(DOCKER_RUN_CMD) > /dev/null; \
+	cat $(DOCKER_CONTAINER_ID)
 
 docker-start: docker-run
 	@touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-		if [ -z "$$(docker container ps --quiet --filter=id=$${DOCKER_CONTAINER_ID})" ]; then \
+		if [ -z "$$(docker container ps --quiet --filter name=^/$${DOCKER_CONTAINER_ID}$$)" ]; then \
 			$(ECHO) -n "Starting container: "; \
-			docker start $(DOCKER_START_OPTS) $${DOCKER_CONTAINER_ID}; \
+			docker start $(DOCKER_START_OPTS) $${DOCKER_CONTAINER_ID} > /dev/null; \
+			$(ECHO) "$${DOCKER_CONTAINER_ID}"; \
 		fi; \
+	else \
+		$(ECHO) "ERROR: Container not found"; \
+		rm -f $(DOCKER_CONTAINER_ID); \
+		exit 1; \
 	fi
 
 docker-stop:
 	@touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-		if [ -n "$$(docker container ps --quiet --filter=id=$${DOCKER_CONTAINER_ID})" ]; then \
+		if [ -n "$$(docker container ps --quiet --filter name=^/$${DOCKER_CONTAINER_ID}$$)" ]; then \
 			$(ECHO) -n "Stopping container: "; \
-			docker stop $(DOCKER_STOP_OPTS) $${DOCKER_CONTAINER_ID}; \
+			docker stop $(DOCKER_STOP_OPTS) $${DOCKER_CONTAINER_ID} > /dev/null; \
+			$(ECHO) "$${DOCKER_CONTAINER_ID}"; \
 		fi; \
+	else \
+		$(ECHO) "ERROR: Container not found"; \
+		rm -f $(DOCKER_CONTAINER_ID); \
+		exit 1; \
 	fi
 
 docker-status:
-	@if [ -e $(DOCKER_CONTAINER_ID) ]; then \
-		DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-		if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-			docker container ps --all --filter=id=$${DOCKER_CONTAINER_ID}; \
-		fi; \
+	@touch $(DOCKER_CONTAINER_ID); \
+	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
+	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
+		docker container ps --all --filter name=^/$${DOCKER_CONTAINER_ID}; \
 	fi
 
 docker-logs:
-	@if [ -e $(DOCKER_CONTAINER_ID) ]; then \
-		DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-		if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-			docker logs $(DOCKER_LOGS_OPTS) $${DOCKER_CONTAINER_ID}; \
-		fi; \
+	@touch $(DOCKER_CONTAINER_ID); \
+	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
+	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
+		docker logs $(DOCKER_LOGS_OPTS) $${DOCKER_CONTAINER_ID}; \
+	else \
+		$(ECHO) "ERROR: Container not found"; \
+		rm -f $(DOCKER_CONTAINER_ID); \
+		exit 1; \
 	fi
 
 docker-logs-tail:
-	@if [ -e $(DOCKER_CONTAINER_ID) ]; then \
-		DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-		if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-			docker logs $(DOCKER_LOGS_OPTS) -f $${DOCKER_CONTAINER_ID}; \
-		fi; \
+	@touch $(DOCKER_CONTAINER_ID); \
+	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
+	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
+		docker logs $(DOCKER_LOGS_OPTS) -f $${DOCKER_CONTAINER_ID}; \
+	else \
+		$(ECHO) "ERROR: Container not found"; \
+		rm -f $(DOCKER_CONTAINER_ID); \
+		exit 1; \
 	fi
 
 docker-exec: docker-start
@@ -253,6 +344,10 @@ docker-exec: docker-start
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
 		docker exec $(DOCKER_EXEC_OPTS) $${DOCKER_CONTAINER_ID} $(DOCKER_EXEC_CMD); \
+	else \
+		$$(ECHO) "ERROR: Container not found"; \
+		rm -f $(DOCKER_CONTAINER_ID); \
+		exit 1; \
 	fi
 
 docker-shell: docker-start
@@ -260,15 +355,30 @@ docker-shell: docker-start
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
 		docker exec $(DOCKER_SHELL_OPTS) $${DOCKER_CONTAINER_ID} $(DOCKER_SHELL_CMD); \
+	else \
+		$(ECHO) "ERROR: Container is not running"; \
+		rm -f $(DOCKER_CONTAINER_ID); \
+		exit 1; \
 	fi
 
-docker-test: docker-start $(CIRCLECI_CONFIG_FILE)
+docker-test: docker-start $(DOCKER_TEST_HELPER)
 	@touch $(DOCKER_CONTAINER_ID); \
 	export DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-	export $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),$(DOCKER_TEST_VAR)="$($(DOCKER_TEST_VAR))"); \
 	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
 		cd $(DOCKER_TEST_DIR); \
-		$(DOCKER_TEST_CMD) --format $(DOCKER_RSPEC_FORMAT); \
+		if [ -n "$(DOCKER_TEST_IMAGE)" ]; then \
+			DOCKER_TEST_ID="$${DOCKER_CONTAINER_ID}_test"; \
+			echo $${DOCKER_TEST_ID} > .container_test; \
+			docker run $(DOCKER_TEST_OPTS) $(DOCKER_TEST_IMAGE) $(DOCKER_TEST_CMD) $(DOCKER_TEST_ARGS); \
+			rm -f .container_test; \
+		else \
+			export $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),$(DOCKER_TEST_VAR)="$($(DOCKER_TEST_VAR))"); \
+			$(DOCKER_TEST_CMD) $(DOCKER_TEST_ARGS); \
+		fi; \
+	else \
+		$(ECHO) "ERROR: Container is not running"; \
+		rm -f $(DOCKER_CONTAINER_ID); \
+		exit 1; \
 	fi
 
 docker-clean: docker-destroy
@@ -284,7 +394,9 @@ docker-pull-baseimage:
 	@docker pull $(BASEIMAGE_IMAGE)
 
 docker-pull-testimage:
-	@docker pull $(DOCKER_TEST_IMAGE)
+	@if [ -n "$(DOCKER_TEST_IMAGE)" ]; then \
+		docker pull $(DOCKER_TEST_IMAGE); \
+	fi
 
 docker-pull-all: docker-pull
 	@for SUBDIR in $(DOCKER_SUBDIR); do \
@@ -295,11 +407,6 @@ docker-pull-all: docker-pull
 docker-push:
 	@docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE); \
 	$(foreach TAG,$(DOCKER_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);)
-
-$(DOCKER_CONTAINER_ID):
-	@$(ECHO) -n "Deploying container: "; \
-	docker run $(DOCKER_RUN_OPTS) -d $(DOCKER_IMAGE) $(DOCKER_RUN_CMD) > $(DOCKER_CONTAINER_ID); \
-	cat $(DOCKER_CONTAINER_ID)
 
 ################################################################################
 
