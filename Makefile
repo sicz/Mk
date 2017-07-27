@@ -14,11 +14,11 @@ create:
 		exit 1; \
 	fi
 	@if [ -e ../$(NAME) -a "$(OVERRIDE)" != "yes" ]; then \
-		$(ECHO) "ERROR: folder ../$(NAME) exists"; \
+		$(ECHO) "ERROR: directory ../$(NAME) exists"; \
 		$(ECHO); \
 		$(MAKE) help; \
 		$(ECHO); \
 		exit 1; \
 	fi
-	@mkdir -p ../$(NAME); \
-	cp -Rnpv docker-project ../$(NAME)
+	@mkdir -p ../$(NAME)
+	cp -Rnpv docker-sample-project ../$(NAME)
