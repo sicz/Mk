@@ -121,7 +121,7 @@ DOCKER_SHELL_CMD	?= /bin/bash
 
 # Running container id
 DOCKER_CONTAINER_ID	:= .container_id
-DOCKER_CONTAINER_NAME	:= $(shell echo "$(DOCKER_IMAGE)_`openssl rand -hex 3`" | sed -E "s/[^[:alnum:]_]+/_/g")
+DOCKER_CONTAINER_NAME	:= $(shell cat $(DOCKER_CONTAINER_ID) 2> /dev/null || echo "$(DOCKER_IMAGE)_`openssl rand -hex 3`" | sed -E "s/[^[:alnum:]_]+/_/g")
 
 ################################################################################
 
@@ -193,11 +193,26 @@ github-info:
 
 ################################################################################
 
-.PHONY: docker-info docker-build docker-rebuild docker-deploy docker-destroy
+.PHONY: docker-all docker-info docker-clean
+.PHONY: docker-build docker-rebuild docker-deploy docker-destroy
 .PHONY: docker-run docker-start docker-stop docker-exec docker-shell
-.PHONY: docker-status docker-logs docker-logs-tail docker-test docker-clean
-.PHONY: docker-pull docker-pull-baseimage docker-pull-testimage docker-pull-all
+.PHONY: docker-status docker-logs docker-logs-tail docker-test
+.PHONY: docker-pull docker-pull-all docker-pull-baseimage docker-pull-testimage
 .PHONY: docker-push
+
+docker-all:
+	@for DOCKER_SUBDIR in . $(DOCKER_SUBDIRS); do \
+		cd $(abspath $(DOCKER_HOME_DIR))/$${DOCKER_SUBDIR}; \
+		if [ "$${DOCKER_SUBDIR}" = "." ]; then \
+			DOCKER_SUBDIR="latest"; \
+		fi; \
+		$(ECHO); \
+		$(ECHO); \
+		$(ECHO) "===> $${DOCKER_SUBDIR}"; \
+		$(ECHO); \
+		$(ECHO); \
+		$(MAKE) $(TARGET) DOCKER_VARIANT=$${DOCKER_SUBDIR}; \
+	done
 
 define DOCKER_INFO
 BASEIMAGE_NAME:		$(BASEIMAGE_NAME)
@@ -257,7 +272,7 @@ docker-rebuild: docker-pull-baseimage
 
 docker-deploy:
 	@$(MAKE) docker-destroy
-	@$(MAKE) docker-start DOCKER_CONTAINER_NAME=$(DOCKER_CONTAINER_NAME)
+	@$(MAKE) docker-start
 
 docker-destroy:
 	@for DOCKER_CONTAINER_ID_FILE in $$(ls .container_* 2>/dev/null | tr '\n' ' '); do \
@@ -272,7 +287,7 @@ docker-destroy:
 		rm -f $${DOCKER_CONTAINER_ID_FILE}; \
 	done
 
-docker-run: $(DOCKER_RUN_HELPER) $(DOCKER_CONTAINER_ID)
+docker-run: $(DOCKER_CONTAINER_ID)
 
 $(DOCKER_CONTAINER_ID):
 	@$(ECHO) -n "Deploying container: "; \
@@ -361,7 +376,7 @@ docker-shell: docker-start
 		exit 1; \
 	fi
 
-docker-test: docker-start $(DOCKER_TEST_HELPER)
+docker-test: docker-start
 	@touch $(DOCKER_CONTAINER_ID); \
 	export DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
@@ -390,17 +405,14 @@ docker-pull:
 		$(ECHO); \
 	done
 
+docker-pull-all:
+	@$(MAKE) docker-all TARGET=docker-pull
+
 docker-pull-baseimage:
 	@docker pull $(BASEIMAGE_IMAGE)
 
 docker-pull-testimage:
 	docker pull $(DOCKER_TEST_IMAGE); \
-
-docker-pull-all: docker-pull
-	@for SUBDIR in $(DOCKER_SUBDIR); do \
-		cd $(abspath $(DOCKER_HOME_DIR))/$${SUBDIR}; \
-		$(MAKE) docker-pull; \
-	done
 
 docker-push:
 	@docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE); \
