@@ -46,9 +46,6 @@ endif
 
 ################################################################################
 
-# Base image tag
-BASEIMAGE_TAG		?= $(DOCKER_TAG)
-
 # Baseimage name
 BASEIMAGE_IMAGE		?= $(BASEIMAGE_NAME):$(BASEIMAGE_TAG)
 
@@ -58,6 +55,7 @@ BASEIMAGE_IMAGE		?= $(BASEIMAGE_NAME):$(BASEIMAGE_TAG)
 DOCKER_REGISTRY		?= docker.io
 DOCKER_PROJECT		?= $(GITHUB_USER)
 DOCKER_NAME		?= $(shell echo $(GITHUB_REPOSITORY) | sed -E -e "s|^docker-||")
+DOCKER_TAG		?= $(BASEIMAGE_TAG)
 
 # Docker image name
 DOCKER_IMAGE_NAME	?= $(DOCKER_PROJECT)/$(DOCKER_NAME)
