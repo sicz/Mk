@@ -277,7 +277,7 @@ docker-destroy:
 		DOCKER_CONTAINER_ID="$$(cat $${DOCKER_CONTAINER_ID_FILE})"; \
 		if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
 			if [ -n "$$(docker container ps --all --quiet --filter name=^/$${DOCKER_CONTAINER_ID}$$)" ]; then \
-				$(ECHO) -n "Destroing container: "; \
+				$(ECHO) -n "Destroying container: "; \
 				docker container rm $(DOCKER_REMOVE_OPTS) -f $${DOCKER_CONTAINER_ID} > /dev/null; \
 				$(ECHO) "$${DOCKER_CONTAINER_ID}"; \
 			fi; \
@@ -431,8 +431,6 @@ ci-rebuild-and-test:
 		fi; \
 	fi; \
 	$(MAKE) rebuild; \
-	$(MAKE) run; \
-	$(MAKE) logs; \
 	$(MAKE) test
 
 ifneq ($(wildcard $(CIRCLECI_CONFIG_FILE)),)
