@@ -110,6 +110,12 @@ DOCKER_EXEC_OPTS	+= --user $(DOCKER_USER)
 DOCKER_SHELL_OPTS	+= --user $(DOCKER_USER)
 endif
 
+# Show info messages
+DOCKER_ENTRYPOINT_INFO	?= yes
+ifdef DOCKER_ENTRYPOINT_INFO
+DOCKER_RUN_OPTS		+= --env "DOCKER_ENTRYPOINT_INFO=$(DOCKER_ENTRYPOINT_INFO)"
+endif
+
 # Docker exec command
 DOCKER_EXEC_CMD		?= /bin/true
 
