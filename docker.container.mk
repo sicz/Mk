@@ -213,12 +213,11 @@ github-info:
 
 ################################################################################
 
-.PHONY: docker-all docker-info docker-clean
+.PHONY: docker-all docker-info
 .PHONY: docker-build docker-rebuild docker-deploy docker-destroy
 .PHONY: docker-create docker-start docker-stop docker-exec docker-shell
-.PHONY: docker-status docker-logs docker-logs-tail docker-test
-.PHONY: docker-pull docker-pull-all docker-pull-baseimage docker-pull-testimage
-.PHONY: docker-push
+.PHONY: docker-status docker-logs docker-logs-tail docker-test docker-clean
+.PHONY: docker-pull docker-pull-baseimage docker-pull-testimage docker-push
 
 define DOCKER_INFO
 BASEIMAGE_NAME:		$(BASEIMAGE_NAME)
@@ -304,31 +303,28 @@ $(DOCKER_CONTAINER_ID):
 docker-start: docker-create
 	@touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-		if [ -z "$$(docker container ps --quiet --filter name=^/$${DOCKER_CONTAINER_ID}$$)" ]; then \
-			$(ECHO) -n "Starting container: "; \
-			docker start $(DOCKER_START_OPTS) $${DOCKER_CONTAINER_ID} > /dev/null; \
-			$(ECHO) "$${DOCKER_CONTAINER_ID}"; \
-		fi; \
-	else \
-		$(ECHO) "ERROR: Container not found"; \
+	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
+		$(ECHO) "ERROR: Container name not found"; \
 		rm -f $(DOCKER_CONTAINER_ID); \
 		exit 1; \
+	fi; \
+	if [ -z "$$(docker container ps --quiet --filter name=^/$${DOCKER_CONTAINER_ID}$$)" ]; then \
+		$(ECHO) -n "Starting container: "; \
+		docker start $(DOCKER_START_OPTS) $${DOCKER_CONTAINER_ID} > /dev/null; \
+		$(ECHO) "$${DOCKER_CONTAINER_ID}"; \
 	fi
 
 docker-stop:
 	@touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-		if [ -n "$$(docker container ps --quiet --filter name=^/$${DOCKER_CONTAINER_ID}$$)" ]; then \
-			$(ECHO) -n "Stopping container: "; \
-			docker stop $(DOCKER_STOP_OPTS) $${DOCKER_CONTAINER_ID} > /dev/null; \
-			$(ECHO) "$${DOCKER_CONTAINER_ID}"; \
-		fi; \
-	else \
-		$(ECHO) "ERROR: Container not found"; \
+	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
 		rm -f $(DOCKER_CONTAINER_ID); \
-		exit 1; \
+		exit; \
+	fi; \
+	if [ -n "$$(docker container ps --quiet --filter name=^/$${DOCKER_CONTAINER_ID}$$)" ]; then \
+		$(ECHO) -n "Stopping container: "; \
+		docker stop $(DOCKER_STOP_OPTS) $${DOCKER_CONTAINER_ID} > /dev/null; \
+		$(ECHO) "$${DOCKER_CONTAINER_ID}"; \
 	fi
 
 docker-status:
@@ -341,65 +337,60 @@ docker-status:
 docker-logs:
 	@touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-		docker logs $(DOCKER_LOGS_OPTS) $${DOCKER_CONTAINER_ID}; \
-	else \
-		$(ECHO) "ERROR: Container not found"; \
+	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
+		$(ECHO) "ERROR: Container name not found"; \
 		rm -f $(DOCKER_CONTAINER_ID); \
 		exit 1; \
-	fi
+	fi; \
+	docker logs $(DOCKER_LOGS_OPTS) $${DOCKER_CONTAINER_ID}; \
 
 docker-logs-tail:
 	@touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-		docker logs $(DOCKER_LOGS_OPTS) -f $${DOCKER_CONTAINER_ID}; \
-	else \
-		$(ECHO) "ERROR: Container not found"; \
+	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
+		$(ECHO) "ERROR: Container name not found"; \
 		rm -f $(DOCKER_CONTAINER_ID); \
 		exit 1; \
-	fi
+	fi; \
+	docker logs $(DOCKER_LOGS_OPTS) -f $${DOCKER_CONTAINER_ID}; \
 
 docker-exec: docker-start
 	@touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-		docker exec $(DOCKER_EXEC_OPTS) $${DOCKER_CONTAINER_ID} $(DOCKER_EXEC_CMD); \
-	else \
-		$$(ECHO) "ERROR: Container not found"; \
+	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
+		$(ECHO) "ERROR: Container name not found"; \
 		rm -f $(DOCKER_CONTAINER_ID); \
 		exit 1; \
-	fi
+	fi; \
+	docker exec $(DOCKER_EXEC_OPTS) $${DOCKER_CONTAINER_ID} $(DOCKER_EXEC_CMD); \
 
 docker-shell: docker-start
 	@touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-		docker exec $(DOCKER_SHELL_OPTS) $${DOCKER_CONTAINER_ID} $(DOCKER_SHELL_CMD); \
-	else \
-		$(ECHO) "ERROR: Container is not running"; \
+	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
+		$(ECHO) "ERROR: Container name not found"; \
 		rm -f $(DOCKER_CONTAINER_ID); \
 		exit 1; \
-	fi
+	fi; \
+	docker exec $(DOCKER_SHELL_OPTS) $${DOCKER_CONTAINER_ID} $(DOCKER_SHELL_CMD); \
 
 docker-test: docker-start
 	@touch $(DOCKER_CONTAINER_ID); \
 	export DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
-	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-		cd $(DOCKER_TEST_DIR); \
-		if [ -n "$(DOCKER_TEST_IMAGE)" ]; then \
-			DOCKER_TEST_ID="$${DOCKER_CONTAINER_ID}_test"; \
-			echo $${DOCKER_TEST_ID} > .container_test; \
-			docker run $(DOCKER_TEST_OPTS) $(DOCKER_TEST_IMAGE) $(DOCKER_TEST_CMD) $(DOCKER_TEST_ARGS); \
-			rm -f .container_test; \
-		else \
-			export $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),$(DOCKER_TEST_VAR)="$($(DOCKER_TEST_VAR))"); \
-			$(DOCKER_TEST_CMD) $(DOCKER_TEST_ARGS); \
-		fi; \
-	else \
-		$(ECHO) "ERROR: Container is not running"; \
+	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
+		$(ECHO) "ERROR: Container name not found"; \
 		rm -f $(DOCKER_CONTAINER_ID); \
 		exit 1; \
+	fi; \
+	cd $(DOCKER_TEST_DIR); \
+	if [ -n "$(DOCKER_TEST_IMAGE)" ]; then \
+		DOCKER_TEST_ID="$${DOCKER_CONTAINER_ID}_test"; \
+		echo $${DOCKER_TEST_ID} > .container_test; \
+		docker run $(DOCKER_TEST_OPTS) $(DOCKER_TEST_IMAGE) $(DOCKER_TEST_CMD) $(DOCKER_TEST_ARGS); \
+		rm -f .container_test; \
+	else \
+		export $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),$(DOCKER_TEST_VAR)="$($(DOCKER_TEST_VAR))"); \
+		$(DOCKER_TEST_CMD) $(DOCKER_TEST_ARGS); \
 	fi
 
 docker-clean: docker-destroy
@@ -412,7 +403,7 @@ docker-pull-baseimage:
 	@docker pull $(BASEIMAGE_IMAGE)
 
 docker-pull-testimage:
-	@docker pull $(DOCKER_TEST_IMAGE); \
+	@docker pull $(DOCKER_TEST_IMAGE)
 
 docker-push:
 	@$(foreach TAG,$(DOCKER_PUSH_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
@@ -447,7 +438,7 @@ $(foreach DOCKER_TARGET,$(DOCKER_ALL_TARGETS),$(eval $(call DOCKER_ALL_TARGET,$(
 .PHONY: ci-build-and-test ci-update-config
 
 ci-build-and-test:
-	@set -x; if [ "$(realpath $(CURDIR))" != "$(realpath $(DOCKER_VARIANT_DIR))" ]; then \
+	@if [ "$(realpath $(CURDIR))" != "$(realpath $(DOCKER_VARIANT_DIR))" ]; then \
 		if [ -n "$$(docker image ls -q $(DOCKER_IMAGE))" ]; then \
 			if [ -n "$(DOCKER_TAGS)" ]; then \
 				echo "Adding tag $(DOCKER_TAGS) to $(DOCKER_IMAGE)"; \
