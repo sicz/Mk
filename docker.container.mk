@@ -139,7 +139,7 @@ DOCKER_TEST_IMAGE	?= $(DOCKER_TEST_NAME):$(DOCKER_TEST_TAG)
 
 # Docker test options, command and args
 DOCKER_TEST_VARS	+= $(DOCKER_BUILD_VARS)
-DOCKER_TEST_OPTS	?= --interactive \
+DOCKER_TEST_OPTS	+= --interactive \
 			   --tty \
 			   --name $${DOCKER_TEST_ID} \
 			   -v $(abspath $(DOCKER_TEST_DIR))/.rspec:/.rspec \
