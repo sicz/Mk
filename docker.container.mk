@@ -443,34 +443,7 @@ $(foreach DOCKER_TARGET,$(DOCKER_ALL_TARGETS),$(eval $(call DOCKER_ALL_TARGET,$(
 
 ################################################################################
 
-.PHONY: ci-build-and-test ci-rebuild-and-test ci-update-config
-
-ci-build-and-test:
-	@if [ "$(realpath $(CURDIR))" != "$(realpath $(DOCKER_HOME_DIR))" ]; then \
-		if [ -n "$$(docker image ls -q $(DOCKER_IMAGE))" ]; then \
-			echo "Adding tag $(DOCKER_TAGS) to $(DOCKER_IMAGE)"; \
-			for DOCKER_TAG in $(DOCKER_TAGS); do \
-				docker image tag $(DOCKER_IMAGE) $(DOCKER_IMAGE_NAME):$${DOCKER_TAG}; \
-			done; \
-			exit; \
-		fi; \
-	fi; \
-	$(MAKE) docker-pull-baseimage; \
-	$(MAKE) build; \
-	$(MAKE) test
-
-ci-rebuild-and-test:
-	@if [ "$(realpath $(CURDIR))" != "$(realpath $(DOCKER_HOME_DIR))" ]; then \
-		if [ -n "$$(docker image ls -q $(DOCKER_IMAGE))" ]; then \
-			echo "Adding tag $(DOCKER_TAGS) to $(DOCKER_IMAGE)"; \
-			for DOCKER_TAG in $(DOCKER_TAGS); do \
-				docker image tag $(DOCKER_IMAGE) $(DOCKER_IMAGE_NAME):$${DOCKER_TAG}; \
-			done; \
-			exit; \
-		fi; \
-	fi; \
-	$(MAKE) rebuild; \
-	$(MAKE) test
+.PHONY: ci-update-config
 
 ifneq ($(wildcard $(CIRCLECI_CONFIG_FILE)),)
 ci-update-config: docker-pull-testimage
