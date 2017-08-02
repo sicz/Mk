@@ -159,6 +159,12 @@ CIRCLECI_CONFIG_FILE	?= $(DOCKER_HOME_DIR)/.circleci/config.yml
 
 ################################################################################
 
+DOCKER_PUSH_TAGS	?= $(DOCKER_TAG) $(DOCKER_TAGS)
+
+DOCKER_PULL_TAGS	?= $(DOCKER_PUSH_TAGS)
+
+################################################################################
+
 ECHO			= /bin/echo
 
 ################################################################################
@@ -404,10 +410,7 @@ docker-clean: docker-destroy
 	@find $(DOCKER_HOME_DIR) -type f -name '*~' | xargs rm -f
 
 docker-pull:
-	@for DOCKER_TAG in $(DOCKER_TAG) $(DOCKER_TAGS); do \
-		docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$${DOCKER_TAG}; \
-		$(ECHO); \
-	done
+	@$(foreach TAG,$(DOCKER_PULL_TAGS),docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
 
 docker-pull-all:
 	@$(MAKE) docker-all TARGET=docker-pull
@@ -419,8 +422,7 @@ docker-pull-testimage:
 	docker pull $(DOCKER_TEST_IMAGE); \
 
 docker-push:
-	@docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE); \
-	$(foreach TAG,$(DOCKER_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);)
+	@$(foreach TAG,$(DOCKER_PUSH_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
 
 ################################################################################
 
