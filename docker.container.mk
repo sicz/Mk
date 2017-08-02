@@ -439,6 +439,7 @@ ci-build-and-test:
 		fi; \
 	fi; \
 	$(MAKE) docker-pull-baseimage; \
+	$(MAKE) docker-pull; \
 	$(MAKE) build; \
 	$(MAKE) test
 
