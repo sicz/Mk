@@ -269,7 +269,7 @@ docker-build:
 	$(ECHO) "Git revision: $(VCS_REF)"; \
 	docker build $(DOCKER_BUILD_OPTS) -f $(DOCKER_FILE) .
 
-docker-rebuild: docker-pull-baseimage
+docker-rebuild:
 	@cd $(DOCKER_BUILD_DIR); \
 	$(ECHO) "Build date: $(BUILD_DATE)"; \
 	$(ECHO) "Git revision: $(VCS_REF)"; \
