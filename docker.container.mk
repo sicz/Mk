@@ -35,6 +35,7 @@ endif
 
 # Project home directory
 DOCKER_HOME_DIR		?= $(CURDIR)
+DOCKER_VARIANT_DIR	?= $(DOCKER_HOME_DIR)
 
 ################################################################################
 
@@ -443,7 +444,23 @@ $(foreach DOCKER_TARGET,$(DOCKER_ALL_TARGETS),$(eval $(call DOCKER_ALL_TARGET,$(
 
 ################################################################################
 
-.PHONY: ci-update-config
+.PHONY: ci-build-and-test ci-update-config
+
+ci-build-and-test:
+	@set -x; if [ "$(realpath $(CURDIR))" != "$(realpath $(DOCKER_VARIANT_DIR))" ]; then \
+		if [ -n "$$(docker image ls -q $(DOCKER_IMAGE))" ]; then \
+			if [ -n "$(DOCKER_TAGS)" ]; then \
+				echo "Adding tag $(DOCKER_TAGS) to $(DOCKER_IMAGE)"; \
+				for DOCKER_TAG in $(DOCKER_TAGS); do \
+					docker image tag $(DOCKER_IMAGE) $(DOCKER_IMAGE_NAME):$${DOCKER_TAG}; \
+				done; \
+			fi; \
+			exit; \
+		fi; \
+	fi; \
+	$(MAKE) docker-pull-baseimage; \
+	$(MAKE) build
+	$(MAKE) test
 
 ifneq ($(wildcard $(CIRCLECI_CONFIG_FILE)),)
 ci-update-config: docker-pull-testimage
