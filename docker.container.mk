@@ -419,7 +419,7 @@ docker-pull-baseimage:
 	@docker pull $(BASEIMAGE_IMAGE)
 
 docker-pull-testimage:
-	docker pull $(DOCKER_TEST_IMAGE); \
+	@docker pull $(DOCKER_TEST_IMAGE); \
 
 docker-push:
 	@$(foreach TAG,$(DOCKER_PUSH_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
