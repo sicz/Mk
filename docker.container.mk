@@ -165,6 +165,12 @@ DOCKER_PULL_TAGS	?= $(DOCKER_PUSH_TAGS)
 
 ################################################################################
 
+DOCKER_ALL_TARGETS	+= docker-pull \
+			   docker-pull-baseimage \
+			   docker-pull-testimage
+
+################################################################################
+
 ECHO			= /bin/echo
 
 ################################################################################
@@ -212,20 +218,6 @@ github-info:
 .PHONY: docker-status docker-logs docker-logs-tail docker-test
 .PHONY: docker-pull docker-pull-all docker-pull-baseimage docker-pull-testimage
 .PHONY: docker-push
-
-docker-all:
-	@for DOCKER_SUBDIR in . $(DOCKER_SUBDIRS); do \
-		cd $(abspath $(DOCKER_HOME_DIR))/$${DOCKER_SUBDIR}; \
-		if [ "$${DOCKER_SUBDIR}" = "." ]; then \
-			DOCKER_SUBDIR="latest"; \
-		fi; \
-		$(ECHO); \
-		$(ECHO); \
-		$(ECHO) "===> $${DOCKER_SUBDIR}"; \
-		$(ECHO); \
-		$(ECHO); \
-		$(MAKE) $(TARGET) DOCKER_VARIANT=$${DOCKER_SUBDIR}; \
-	done
 
 define DOCKER_INFO
 BASEIMAGE_NAME:		$(BASEIMAGE_NAME)
@@ -415,9 +407,6 @@ docker-clean: docker-destroy
 docker-pull:
 	@$(foreach TAG,$(DOCKER_PULL_TAGS),docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
 
-docker-pull-all:
-	@$(MAKE) docker-all TARGET=docker-pull
-
 docker-pull-baseimage:
 	@docker pull $(BASEIMAGE_IMAGE)
 
@@ -426,6 +415,31 @@ docker-pull-testimage:
 
 docker-push:
 	@$(foreach TAG,$(DOCKER_PUSH_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
+
+
+################################################################################
+
+docker-all:
+	@for DOCKER_SUBDIR in . $(DOCKER_SUBDIRS); do \
+		cd $(abspath $(DOCKER_HOME_DIR))/$${DOCKER_SUBDIR}; \
+		if [ "$${DOCKER_SUBDIR}" = "." ]; then \
+			DOCKER_SUBDIR="latest"; \
+		fi; \
+		$(ECHO); \
+		$(ECHO); \
+		$(ECHO) "===> $${DOCKER_SUBDIR}"; \
+		$(ECHO); \
+		$(ECHO); \
+		$(MAKE) $(DOCKER_TARGET) DOCKER_VARIANT=$${DOCKER_SUBDIR}; \
+	done
+
+# DOCKER_ALL_TARGET:
+# $1 - <TARGET>
+define DOCKER_ALL_TARGET
+.PHONY: $(1)-all
+$(1)-all: ; @$(MAKE) docker-all DOCKER_TARGET=$(1)
+endef
+$(foreach DOCKER_TARGET,$(DOCKER_ALL_TARGETS),$(eval $(call DOCKER_ALL_TARGET,$(DOCKER_TARGET))))
 
 ################################################################################
 
