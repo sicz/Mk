@@ -215,7 +215,7 @@ github-info:
 
 .PHONY: docker-all docker-info docker-clean
 .PHONY: docker-build docker-rebuild docker-deploy docker-destroy
-.PHONY: docker-run docker-start docker-stop docker-exec docker-shell
+.PHONY: docker-create docker-start docker-stop docker-exec docker-shell
 .PHONY: docker-status docker-logs docker-logs-tail docker-test
 .PHONY: docker-pull docker-pull-all docker-pull-baseimage docker-pull-testimage
 .PHONY: docker-push
@@ -293,15 +293,15 @@ docker-destroy:
 		rm -f $${DOCKER_CONTAINER_ID_FILE}; \
 	done
 
-docker-run: $(DOCKER_CONTAINER_ID)
+docker-create: $(DOCKER_CONTAINER_ID)
 
 $(DOCKER_CONTAINER_ID):
-	@$(ECHO) -n "Deploying container: "; \
+	@$(ECHO) -n "Creating container: "; \
 	echo $(DOCKER_CONTAINER_NAME) > $(DOCKER_CONTAINER_ID); \
-	docker run $(DOCKER_RUN_OPTS) --name $(DOCKER_CONTAINER_NAME) -d $(DOCKER_IMAGE) $(DOCKER_RUN_CMD) > /dev/null; \
+	docker create $(DOCKER_RUN_OPTS) --name $(DOCKER_CONTAINER_NAME) $(DOCKER_IMAGE) $(DOCKER_RUN_CMD) > /dev/null; \
 	cat $(DOCKER_CONTAINER_ID)
 
-docker-start: docker-run
+docker-start: docker-create
 	@touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
