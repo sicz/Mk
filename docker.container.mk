@@ -280,19 +280,25 @@ docker-deploy:
 	@$(MAKE) docker-start
 
 docker-destroy:
-	@for DOCKER_CONTAINER_ID_FILE in $$(ls .container_* 2>/dev/null | tr '\n' ' '); do \
-		DOCKER_CONTAINER_ID="$$(cat $${DOCKER_CONTAINER_ID_FILE})"; \
-		if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
-			if [ -n "$$(docker container ps --all --quiet --filter name=^/$${DOCKER_CONTAINER_ID}$$)" ]; then \
-				$(ECHO) -n "Destroying container: "; \
-				docker container rm $(DOCKER_REMOVE_OPTS) -f $${DOCKER_CONTAINER_ID} > /dev/null; \
-				$(ECHO) "$${DOCKER_CONTAINER_ID}"; \
-			fi; \
-		fi; \
-		rm -f $${DOCKER_CONTAINER_ID_FILE}; \
+	@for DOCKER_CONTAINER_ID in $$(ls .container_* 2>/dev/null | tr '\n' ' '); do \
+		$(MAKE) docker-rm DOCKER_CONTAINER_ID=$${DOCKER_CONTAINER_ID}; \
 	done
 
+docker-rm:
+	@touch $(DOCKER_CONTAINER_ID); \
+	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
+	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
+		if [ -n "$$(docker container ps --all --quiet --filter name=^/$${DOCKER_CONTAINER_ID}$$)" ]; then \
+			$(ECHO) -n "Destroying container: "; \
+			docker container rm $(DOCKER_REMOVE_OPTS) -f $${DOCKER_CONTAINER_ID} > /dev/null; \
+			$(ECHO) "$${DOCKER_CONTAINER_ID}"; \
+		fi; \
+	fi; \
+	rm -f $(DOCKER_CONTAINER_ID); \
+
+
 docker-create: $(DOCKER_CONTAINER_ID)
+	@true
 
 $(DOCKER_CONTAINER_ID):
 	@$(ECHO) -n "Creating container: "; \
@@ -310,8 +316,7 @@ docker-start: docker-create
 	fi; \
 	if [ -z "$$(docker container ps --quiet --filter name=^/$${DOCKER_CONTAINER_ID}$$)" ]; then \
 		$(ECHO) -n "Starting container: "; \
-		docker start $(DOCKER_START_OPTS) $${DOCKER_CONTAINER_ID} > /dev/null; \
-		$(ECHO) "$${DOCKER_CONTAINER_ID}"; \
+		docker start $(DOCKER_START_OPTS) $${DOCKER_CONTAINER_ID}; \
 	fi
 
 docker-stop:
@@ -375,7 +380,7 @@ docker-shell: docker-start
 	docker exec $(DOCKER_SHELL_OPTS) $${DOCKER_CONTAINER_ID} $(DOCKER_SHELL_CMD); \
 
 docker-test: docker-start
-	@touch $(DOCKER_CONTAINER_ID); \
+	@set -x; touch $(DOCKER_CONTAINER_ID); \
 	export DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
 		$(ECHO) "ERROR: Container name not found"; \
