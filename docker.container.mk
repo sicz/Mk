@@ -147,7 +147,8 @@ DOCKER_TEST_OPTS	+= --interactive \
 			   -v $(abspath $(DOCKER_TEST_DIR))/spec:/spec \
 			   -v /var/run/docker.sock:/var/run/docker.sock \
 			   $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),-e "$(DOCKER_TEST_VAR)=$($(DOCKER_TEST_VAR))") \
-			   -e DOCKER_CONTAINER_ID=$${DOCKER_CONTAINER_ID} \
+			   -e DOCKER_TEST_CONTAINER_ID=$${DOCKER_CONTAINER_ID} \
+			   -e DOCKER_TEST_CONTAINER_NAME=$${DOCKER_CONTAINER_ID} \
 			   --rm
 DOCKER_TEST_CMD		?= rspec
 DOCKER_TEST_ARGS	?= --format $(DOCKER_RSPEC_FORMAT)
