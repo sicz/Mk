@@ -411,6 +411,8 @@ docker-test: docker-start
 		rm -f .container_test; \
 	else \
 		export $(foreach DOCKER_TEST_VAR,$(DOCKER_TEST_VARS),$(DOCKER_TEST_VAR)="$($(DOCKER_TEST_VAR))"); \
+		export DOCKER_TEST_CONTAINER_ID=$${DOCKER_CONTAINER_ID}; \
+		export DOCKER_TEST_CONTAINER_NAME=$${DOCKER_CONTAINER_ID}; \
 		$(DOCKER_TEST_CMD) $(DOCKER_TEST_ARGS); \
 	fi
 
@@ -478,7 +480,7 @@ ci-build-and-test:
 		fi; \
 	fi; \
 	$(MAKE) docker-pull-baseimage; \
-	$(MAKE) build
+	$(MAKE) build; \
 	$(MAKE) test
 
 ifneq ($(wildcard $(CIRCLECI_CONFIG_FILE)),)
