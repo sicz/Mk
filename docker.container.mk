@@ -262,31 +262,37 @@ endef
 export DOCKER_INFO
 
 docker-info:
-	@$(ECHO) "$${DOCKER_INFO}" | sed -E -e $$'s/ +-/\\\n\\\t\\\t\\\t-/g' -e $$'s/([A-Z]) ([A-Z])/\\1\\\n\\\t\\\t\\\t\\2/g'
+	@set -eo pipefail; \
+	$(ECHO) "$${DOCKER_INFO}" | sed -E -e $$'s/ +-/\\\n\\\t\\\t\\\t-/g' -e $$'s/([A-Z]) ([A-Z])/\\1\\\n\\\t\\\t\\\t\\2/g'
 
 docker-build:
-	@cd $(DOCKER_BUILD_DIR); \
+	@set -eo pipefail; \
+	cd $(DOCKER_BUILD_DIR); \
 	$(ECHO) "Build date: $(BUILD_DATE)"; \
 	$(ECHO) "Git revision: $(VCS_REF)"; \
 	docker build $(DOCKER_BUILD_OPTS) -f $(DOCKER_FILE) .
 
 docker-rebuild:
-	@cd $(DOCKER_BUILD_DIR); \
+	@set -eo pipefail; \
+	cd $(DOCKER_BUILD_DIR); \
 	$(ECHO) "Build date: $(BUILD_DATE)"; \
 	$(ECHO) "Git revision: $(VCS_REF)"; \
 	docker build $(DOCKER_BUILD_OPTS) -f $(DOCKER_FILE) --no-cache .
 
 docker-deploy:
-	@$(MAKE) docker-destroy
-	@$(MAKE) docker-start
+	@set -eo pipefail; \
+	$(MAKE) docker-destroy; \
+	$(MAKE) docker-start
 
 docker-destroy:
-	@for DOCKER_CONTAINER_ID in $$(ls .container_* 2>/dev/null | tr '\n' ' '); do \
+	@set -eo pipefail; \
+	for DOCKER_CONTAINER_ID in $$(ls .container_* 2>/dev/null | tr '\n' ' '); do \
 		$(MAKE) docker-rm DOCKER_CONTAINER_ID=$${DOCKER_CONTAINER_ID}; \
 	done
 
 docker-rm:
-	@touch $(DOCKER_CONTAINER_ID); \
+	@set -eo pipefail; \
+	touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
 		if [ -n "$$(docker container ps --all --quiet --filter name=^/$${DOCKER_CONTAINER_ID}$$)" ]; then \
@@ -302,13 +308,15 @@ docker-create: $(DOCKER_CONTAINER_ID)
 	@true
 
 $(DOCKER_CONTAINER_ID):
-	@$(ECHO) -n "Creating container: "; \
+	@set -eo pipefail; \
+	$(ECHO) -n "Creating container: "; \
 	echo $(DOCKER_CONTAINER_NAME) > $(DOCKER_CONTAINER_ID); \
 	docker create $(DOCKER_RUN_OPTS) --name $(DOCKER_CONTAINER_NAME) $(DOCKER_IMAGE) $(DOCKER_RUN_CMD) > /dev/null; \
 	cat $(DOCKER_CONTAINER_ID)
 
 docker-start: docker-create
-	@touch $(DOCKER_CONTAINER_ID); \
+	@set -eo pipefail; \
+	touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
 		$(ECHO) "ERROR: Container name not found"; \
@@ -321,7 +329,8 @@ docker-start: docker-create
 	fi
 
 docker-stop:
-	@touch $(DOCKER_CONTAINER_ID); \
+	@set -eo pipefail; \
+	touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
 		rm -f $(DOCKER_CONTAINER_ID); \
@@ -334,14 +343,16 @@ docker-stop:
 	fi
 
 docker-status:
-	@touch $(DOCKER_CONTAINER_ID); \
+	@set -eo pipefail; \
+	touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -n "$${DOCKER_CONTAINER_ID}" ]; then \
 		docker container ps --all --filter name=^/$${DOCKER_CONTAINER_ID}; \
 	fi
 
 docker-logs:
-	@touch $(DOCKER_CONTAINER_ID); \
+	@set -eo pipefail; \
+	touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
 		$(ECHO) "ERROR: Container name not found"; \
@@ -351,7 +362,8 @@ docker-logs:
 	docker logs $(DOCKER_LOGS_OPTS) $${DOCKER_CONTAINER_ID}; \
 
 docker-logs-tail:
-	@touch $(DOCKER_CONTAINER_ID); \
+	@set -eo pipefail; \
+	touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
 		$(ECHO) "ERROR: Container name not found"; \
@@ -361,7 +373,8 @@ docker-logs-tail:
 	docker logs $(DOCKER_LOGS_OPTS) -f $${DOCKER_CONTAINER_ID}; \
 
 docker-exec: docker-start
-	@touch $(DOCKER_CONTAINER_ID); \
+	@set -eo pipefail; \
+	touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
 		$(ECHO) "ERROR: Container name not found"; \
@@ -371,7 +384,8 @@ docker-exec: docker-start
 	docker exec $(DOCKER_EXEC_OPTS) $${DOCKER_CONTAINER_ID} $(DOCKER_EXEC_CMD); \
 
 docker-shell: docker-start
-	@touch $(DOCKER_CONTAINER_ID); \
+	@set -eo pipefail; \
+	touch $(DOCKER_CONTAINER_ID); \
 	DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
 		$(ECHO) "ERROR: Container name not found"; \
@@ -381,7 +395,8 @@ docker-shell: docker-start
 	docker exec $(DOCKER_SHELL_OPTS) $${DOCKER_CONTAINER_ID} $(DOCKER_SHELL_CMD); \
 
 docker-test: docker-start
-	@set -x; touch $(DOCKER_CONTAINER_ID); \
+	@set -eo pipefail; \
+	touch $(DOCKER_CONTAINER_ID); \
 	export DOCKER_CONTAINER_ID="$$(cat $(DOCKER_CONTAINER_ID))"; \
 	if [ -z "$${DOCKER_CONTAINER_ID}" ]; then \
 		$(ECHO) "ERROR: Container name not found"; \
@@ -400,25 +415,31 @@ docker-test: docker-start
 	fi
 
 docker-clean: docker-destroy
-	@find $(DOCKER_HOME_DIR) -type f -name '*~' | xargs rm -f
+	@set -eo pipefail; \
+	find $(DOCKER_HOME_DIR) -type f -name '*~' | xargs rm -f
 
 docker-pull:
-	@$(foreach TAG,$(DOCKER_PULL_TAGS),docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
+	@set -eo pipefail; \
+	$(foreach TAG,$(DOCKER_PULL_TAGS),docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
 
 docker-pull-baseimage:
-	@docker pull $(BASEIMAGE_IMAGE)
+	@set -eo pipefail; \
+	docker pull $(BASEIMAGE_IMAGE)
 
 docker-pull-testimage:
-	@docker pull $(DOCKER_TEST_IMAGE)
+	@set -eo pipefail; \
+	docker pull $(DOCKER_TEST_IMAGE)
 
 docker-push:
-	@$(foreach TAG,$(DOCKER_PUSH_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
+	@set -eo pipefail; \
+	$(foreach TAG,$(DOCKER_PUSH_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
 
 
 ################################################################################
 
 docker-all:
-	@for DOCKER_SUBDIR in . $(DOCKER_SUBDIRS); do \
+	@set -eo pipefail; \
+	for DOCKER_SUBDIR in . $(DOCKER_SUBDIRS); do \
 		cd $(abspath $(DOCKER_HOME_DIR))/$${DOCKER_SUBDIR}; \
 		if [ "$${DOCKER_SUBDIR}" = "." ]; then \
 			DOCKER_SUBDIR="latest"; \
@@ -444,7 +465,8 @@ $(foreach DOCKER_TARGET,$(DOCKER_ALL_TARGETS),$(eval $(call DOCKER_ALL_TARGET,$(
 .PHONY: ci-build-and-test ci-update-config
 
 ci-build-and-test:
-	@if [ "$(realpath $(CURDIR))" != "$(realpath $(DOCKER_VARIANT_DIR))" ]; then \
+	@set -eo pipefail; \
+	if [ "$(realpath $(CURDIR))" != "$(realpath $(DOCKER_VARIANT_DIR))" ]; then \
 		if [ -n "$$(docker image ls -q $(DOCKER_IMAGE))" ]; then \
 			if [ -n "$(DOCKER_TAGS)" ]; then \
 				echo "Adding tag $(DOCKER_TAGS) to $(DOCKER_IMAGE)"; \
@@ -461,7 +483,8 @@ ci-build-and-test:
 
 ifneq ($(wildcard $(CIRCLECI_CONFIG_FILE)),)
 ci-update-config: docker-pull-testimage
-	@DOCKER_TEST_IMAGE_DIGEST="$(shell docker image inspect $(DOCKER_TEST_IMAGE) --format '{{index .RepoDigests 0}}')"; \
+	@set -eo pipefail; \
+	DOCKER_TEST_IMAGE_DIGEST="$(shell docker image inspect $(DOCKER_TEST_IMAGE) --format '{{index .RepoDigests 0}}')"; \
 	sed -i~ -E -e "s|-[[:space:]]*image:[[:space:]]*$(DOCKER_TEST_NAME)(@sha256)?:.*|- image: $${DOCKER_TEST_IMAGE_DIGEST}|" $(CIRCLECI_CONFIG_FILE); \
 	if diff $(CIRCLECI_CONFIG_FILE)~ $(CIRCLECI_CONFIG_FILE) > /dev/null; then \
 		$(ECHO) "CircleCI configuration is up-to-date"; \
