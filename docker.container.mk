@@ -76,7 +76,6 @@ DOCKER_BUILD_DIR	?= $(DOCKER_HOME_DIR)
 DOCKER_BUILD_OPTS	+= -t $(DOCKER_IMAGE) \
 			   $(foreach TAG,$(DOCKER_TAGS),-t $(DOCKER_IMAGE_NAME):$(TAG))
 
-
 # Use http proxy when building image
 ifdef http_proxy
 DOCKER_BUILD_OPTS	+= --build-arg http_proxy=$(http_proxy)
@@ -215,7 +214,7 @@ github-info:
 ################################################################################
 
 .PHONY: docker-all docker-info
-.PHONY: docker-build docker-rebuild docker-deploy docker-destroy
+.PHONY: docker-build docker-rebuild docker-tag docker-deploy docker-destroy
 .PHONY: docker-create docker-start docker-stop docker-exec docker-shell
 .PHONY: docker-status docker-logs docker-logs-tail docker-test docker-clean
 .PHONY: docker-pull docker-pull-baseimage docker-pull-testimage docker-push
@@ -278,6 +277,17 @@ docker-rebuild:
 	$(ECHO) "Build date: $(BUILD_DATE)"; \
 	$(ECHO) "Git revision: $(VCS_REF)"; \
 	docker build $(DOCKER_BUILD_OPTS) -f $(DOCKER_FILE) --no-cache .
+
+docker-tag:
+	@set -eo pipefail; \
+	if [ -n "$(DOCKER_TAGS)" ]; then \
+		$(ECHO) -n "Tagging image with tags: "; \
+		for DOCKER_TAG in $(DOCKER_TAGS); do \
+			$(ECHO) -n "$${DOCKER_TAG}"; \
+			docker tag $(DOCKER_IMAGE) $(DOCKER_IMAGE_NAME):$${DOCKER_TAG}; \
+		done; \
+		$(ECHO); \
+	fi
 
 docker-deploy:
 	@set -eo pipefail; \
