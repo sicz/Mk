@@ -774,9 +774,8 @@ $(foreach DOCKER_TARGET,$(DOCKER_ALL_TARGETS),$(eval $(call DOCKER_ALL_TARGET,$(
 ################################################################################
 
 # Update Dockerspec tag in CircleCI configuration
-.PHONY: ci-update-config
-ifneq ($(wildcard $(CIRCLE_CONFIG_FILE)),)
-ci-update-config: docker-pull-testimage
+.PHONY: circle-update-config
+circle-update-config: docker-pull-testimage
 	@set -eo pipefail; \
 	TEST_IMAGE_DIGEST="$(shell docker image inspect $(TEST_IMAGE) --format '{{index .RepoDigests 0}}')"; \
 	sed -i~ -E -e "s|-[[:space:]]*image:[[:space:]]*$(TEST_IMAGE_NAME)(@sha256)?:.*|- image: $${TEST_IMAGE_DIGEST}|" $(CIRCLE_CONFIG_FILE); \
@@ -786,9 +785,5 @@ ci-update-config: docker-pull-testimage
 		$(ECHO) "Updating CircleCI Docker executor image to: $${TEST_IMAGE_DIGEST}"; \
 	fi; \
 	rm -f $(CIRCLE_CONFIG_FILE)~
-else
-ci-update-config:
-	@true
-endif
 
 ################################################################################
