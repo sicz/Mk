@@ -295,11 +295,15 @@ DOCKER_REGISTRY		?= docker.io
 DOCKER_PUSH_TAGS	?= $(DOCKER_IMAGE_TAG) $(DOCKER_IMAGE_TAGS)
 DOCKER_PULL_TAGS	?= $(DOCKER_PUSH_TAGS)
 
+# Docker image dependencies
+DOCKER_IMAGE_DEPENDENCIES += $(BASE_IMAGE) \
+			   $(TEST_IMAGE)
+
 ################################################################################
 
 DOCKER_ALL_TARGETS	+= docker-pull \
-			   docker-pull-baseimage \
-			   docker-pull-testimage
+			   docker-pull-images \
+			   docker-pull-dependencies
 
 ################################################################################
 
@@ -456,6 +460,7 @@ define DOCKER_REGISTRY_INFO
 DOCKER_REGISTRY:	$(DOCKER_REGISTRY)
 DOCKER_PUSH_TAGS:	$(DOCKER_PUSH_TAGS)
 DOCKER_PULL_TAGS:	$(DOCKER_PULL_TAGS)
+DOCKER_IMAGE_DEPENDENCIES: $(DOCKER_IMAGE_DEPENDENCIES)
 endef
 export DOCKER_REGISTRY_INFO
 
@@ -719,17 +724,21 @@ docker-clean:
 
 ################################################################################
 
-# Pull project images from Docker registry
+# Pull all images from Docker Registry
 .PHONY: docker-pull
-docker-pull:
+docker-pull: docker-pull-dependencies docker-pull-images
+
+# Pull project images dependencies from Docker registry
+.PHONY: docker-pull-dependencies
+docker-pull-dependencies:
+	@set -eo pipefail; \
+	$(foreach DOCKER_IMAGE,$(DOCKER_IMAGE_DEPENDENCIES),docker pull $(DOCKER_IMAGE);echo;)
+
+# Pull project images from Docker registry
+.PHONY: docker-pull-images
+docker-pull-images:
 	@set -eo pipefail; \
 	$(foreach TAG,$(DOCKER_PULL_TAGS),docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
-
-# Pull base image from Docker registry
-.PHONY: docker-pull-baseimage
-docker-pull-baseimage:
-	@set -eo pipefail; \
-	docker pull $(BASE_IMAGE)
 
 # Pull test image from Docker registry
 .PHONY: docker-pull-testimage
