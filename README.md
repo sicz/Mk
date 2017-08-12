@@ -23,10 +23,10 @@ git clone https://github.com/sicz/Mk
 
 ### Usage
 
-Create new Docker container directory populated from `docker-container`
+Create new Docker container directory populated from `docker-sample-project`
 directory:
 ```bash
-make create NAME=docker-my-container
+make create NAME=my-docker-image
 ```
 
 Read carefully and adjust all files in your new Docker container directory.
