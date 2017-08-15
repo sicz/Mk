@@ -41,7 +41,7 @@ endif
 PROJECT_DIR		?= $(CURDIR)
 BUILD_DIR		?= $(PROJECT_DIR)
 TEST_DIR		?= $(BUILD_DIR)
-DOCKER_VARIANT_DIR		?= $(BUILD_DIR)
+DOCKER_VARIANT_DIR	?= $(BUILD_DIR)
 
 ### BASE_IMAGE #################################################################
 
@@ -77,7 +77,7 @@ else ifdef http_proxy
 BUILD_OPTS		+= --build-arg HTTP_PROXY=$(HTTP_PROXY)
 endif
 
-# Dockerfile build arguments
+# Docker image build variables
 BUILD_OPTS		+= $(foreach VAR,$(BUILD_VARS),--build-arg "$(VAR)=$($(VAR))")
 BUILD_VARS		+= BASE_IMAGE \
 			   BASE_IMAGE_NAME \
@@ -104,7 +104,7 @@ BUILD_VARS		+= BASE_IMAGE \
 # stack - Docker Swarm stack
 DOCKER_EXECUTOR		?= container
 
-DOCKER_CONFIG_TARGET	?= docker-$(DOCKER_EXECUTOR)-config
+DISPLAY_CONFIG_FILE_TARGET ?= display-$(DOCKER_EXECUTOR)-config-file
 DOCKER_START_TARGET	?= docker-$(DOCKER_EXECUTOR)-start
 DOCKER_PS_TARGET	?= docker-$(DOCKER_EXECUTOR)-ps
 DOCKER_LOGS_TARGET	?= docker-$(DOCKER_EXECUTOR)-logs
@@ -126,7 +126,7 @@ DOCKER_EXECUTOR_ID	:= $(shell \
 
 # Support multiple executor configurations
 ifneq ($(DOCKER_CONFIGS),)
-DOCKER_CONFIG_FILE	?= .docker-config
+DOCKER_CONFIG_FILE	?= .docker-executor-config
 DOCKER_CONFIG		?= $(shell \
 				if [ -e $(DOCKER_CONFIG_FILE) ]; then \
 					cat $(DOCKER_CONFIG_FILE); \
@@ -195,6 +195,7 @@ COMPOSE_VARS		+= $(CONTAINER_VARS) \
 			   COMPOSE_FILE \
 			   PROJECT_DIR \
 			   BUILD_DIR \
+			   CURDIR \
 			   TEST_DIR \
 			   TEST_ENV_FILE \
 			   DOCKER_VARIANT_DIR
@@ -231,6 +232,7 @@ STACK_VARS		+= $(COMPOSE_VARS) \
 			   $(TEST_VARS) \
 			   PROJECT_DIR \
 			   BUILD_DIR \
+			   CURDIR \
 			   TEST_DIR \
 			   TEST_ENV_FILE \
 			   DOCKER_VARIANT_DIR
@@ -245,10 +247,8 @@ TEST_IMAGE_TAG		?= latest
 TEST_IMAGE		?= $(TEST_IMAGE_NAME):$(TEST_IMAGE_TAG)
 
 # Docker test container name and opts
-TEST_CONTAINER_NAME 	?= $(shell \
-				echo "$(DOCKER_EXECUTOR_ID)_$(TEST_IMAGE_NAME)" | \
-				sed -E "s/[^[:alnum:]_]+/_/g" \
-			   )
+TEST_CONTAINER_NAME 	?= $(DOCKER_EXECUTOR_ID)_$(TEST_SERVICE_NAME)
+
 # Docker Compose/Swarm test service name
 TEST_SERVICE_NAME	?= test
 
@@ -283,7 +283,7 @@ TEST_ENV_FILE		?= $(CURDIR)/.docker-test-env
 TEST_CMD		?= rspec
 
 # Rspec output format
-RSPEC_FORMAT		?= progress
+# RSPEC_FORMAT		?= documentation
 ifneq ($(RSPEC_FORMAT),)
 SPEC_OPTS		+= --format $(RSPEC_FORMAT)
 endif
@@ -316,10 +316,11 @@ DOCKER_IMAGE_DEPENDENCIES += $(BASE_IMAGE)
 
 ### DOCKER_VERSION #############################################################
 
-# DOCKER_VERSIONS	?=
+DOCKER_VERSIONS		?= latest
 DOCKER_VERSION_ALL_TARGETS += docker-pull \
 			   docker-pull-images \
 			   docker-pull-dependencies \
+			   docker-pull-testimage \
 			   docker-push
 
 ################################################################################
@@ -378,12 +379,12 @@ define DOCKER_IMAGE_MAKE_VARS
 DOCKER_PROJECT:		$(DOCKER_PROJECT)
 DOCKER_PROJECT_DESC:	$(DOCKER_PROJECT_DESC)
 DOCKER_PROJECT_URL:	$(DOCKER_PROJECT_URL)
+
 DOCKER_NAME:		$(DOCKER_NAME)
 DOCKER_IMAGE_TAG:	$(DOCKER_IMAGE_TAG)
 DOCKER_IMAGE_TAGS:	$(DOCKER_IMAGE_TAGS)
 DOCKER_IMAGE_NAME:	$(DOCKER_IMAGE_NAME)
 DOCKER_IMAGE:		$(DOCKER_IMAGE)
-DOCKER_FILE		$(DOCKER_FILE)
 endef
 export DOCKER_IMAGE_MAKE_VARS
 
@@ -391,8 +392,9 @@ define BUILD_MAKE_VARS
 CURDIR:			$(CURDIR)
 PROJECT_DIR:		$(PROJECT_DIR)
 
-BUILD_DIR:		$(BUILD_DIR)
+DOCKER_FILE		$(DOCKER_FILE)
 BUILD_DOCKER_FILE:	$(BUILD_DOCKER_FILE)
+BUILD_DIR:		$(BUILD_DIR)
 BUILD_VARS:		$(BUILD_VARS)
 BUILD_OPTS:		$(BUILD_OPTS)
 endef
@@ -400,14 +402,14 @@ export BUILD_MAKE_VARS
 
 define EXECUTOR_COMMON
 DOCKER_EXECUTOR:	$(DOCKER_EXECUTOR)
-DOCKER_EXECUTOR_ID_FILE: $(DOCKER_EXECUTOR_ID_FILE)
 DOCKER_EXECUTOR_ID:	$(DOCKER_EXECUTOR_ID)
+DOCKER_EXECUTOR_ID_FILE: $(DOCKER_EXECUTOR_ID_FILE)
 
 DOCKER_CONFIGS:		$(DOCKER_CONFIGS)
 DOCKER_CONFIG:		$(DOCKER_CONFIG)
 DOCKER_CONFIG_FILE:	$(DOCKER_CONFIG_FILE)
 
-DOCKER_CONFIG_TARGET:	$(DOCKER_CONFIG_TARGET)
+DISPLAY_CONFIG_FILE_TARGET: $(DISPLAY_CONFIG_FILE_TARGET)
 DOCKER_START_TARGET:	$(DOCKER_START_TARGET)
 DOCKER_PS_TARGET:	$(DOCKER_PS_TARGET)
 DOCKER_LOGS_TARGET:	$(DOCKER_LOGS_TARGET)
@@ -433,16 +435,16 @@ CONTAINER_LOGS_OPTS:	$(CONTAINER_LOGS_OPTS)
 CONTAINER_STOP_OPTS:	$(CONTAINER_STOP_OPTS)
 CONTAINER_RM_OPTS:	$(CONTAINER_RM_OPTS)
 
-TEST_DIR:		$(TEST_DIR)
 TEST_IMAGE_NAME:	$(TEST_IMAGE_NAME)
 TEST_IMAGE_TAG:		$(TEST_IMAGE_TAG)
 TEST_IMAGE:		$(TEST_IMAGE)
-TEST_CMD:		$(TEST_CMD)
+TEST_DIR:		$(TEST_DIR)
 TEST_CONTAINER_NAME:	$(TEST_CONTAINER_NAME)
 TEST_VARS:		$(TEST_VARS)
 TEST_CONTAINER_VARS:	$(TEST_CONTAINER_VARS)
 TEST_CONTAINER_OPTS:	$(TEST_CONTAINER_OPTS)
 
+TEST_CMD:		$(TEST_CMD)
 RSPEC_FORMAT:		$(RSPEC_FORMAT)
 SPEC_OPTS:		$(SPEC_OPTS)
 endef
@@ -467,16 +469,15 @@ COMPOSE_LOGS_OPTS: 	$(COMPOSE_LOGS_OPTS)
 COMPOSE_STOP_OPTS: 	$(COMPOSE_STOP_OPTS)
 COMPOSE_RM_OPTS:	$(COMPOSE_RM_OPTS)
 
-TEST_DIR:		$(TEST_DIR)
 TEST_IMAGE_NAME:	$(TEST_IMAGE_NAME)
 TEST_IMAGE_TAG:		$(TEST_IMAGE_TAG)
 TEST_IMAGE:		$(TEST_IMAGE)
-TEST_CMD:		$(TEST_CMD)
-TEST_CONTAINER_NAME:	$(TEST_CONTAINER_NAME)
+TEST_DIR:		$(TEST_DIR)
+TEST_ENV_FILE:		$(TEST_ENV_FILE)
 TEST_VARS:		$(TEST_VARS)
 TEST_COMPOSE_VARS:	$(TEST_COMPOSE_VARS)
-TEST_COMPOSE_CMD:	$(TEST_COMPOSE_CMD)
 
+TEST_CMD:		$(TEST_CMD)
 RSPEC_FORMAT:		$(RSPEC_FORMAT)
 SPEC_OPTS:		$(SPEC_OPTS)
 endef
@@ -491,16 +492,16 @@ STACK_FILE:		$(STACK_FILE)
 STACK_NAME:		$(STACK_NAME)
 STACK_SERVICE_NAME:	$(STACK_SERVICE_NAME)
 
-TEST_DIR:		$(TEST_DIR)
 TEST_IMAGE_NAME:	$(TEST_IMAGE_NAME)
 TEST_IMAGE_TAG:		$(TEST_IMAGE_TAG)
 TEST_IMAGE:		$(TEST_IMAGE)
-TEST_CMD:		$(TEST_CMD)
-TEST_CONTAINER_NAME:	$(TEST_CONTAINER_NAME)
+TEST_DIR:		$(TEST_DIR)
+TEST_ENV_FILE:		$(TEST_ENV_FILE)
 TEST_VARS:		$(TEST_VARS)
 TEST_STACK_VARS:	$(TEST_STACK_VARS)
 TEST_STACK_CMD:		$(TEST_STACK_CMD)
 
+TEST_CMD:		$(TEST_CMD)
 RSPEC_FORMAT:		$(RSPEC_FORMAT)
 SPEC_OPTS:		$(SPEC_OPTS)
 endef
@@ -508,8 +509,8 @@ endif
 export EXECUTOR_MAKE_VARS
 
 define SHELL_MAKE_VARS
-SHELL_OPTS:	$(SHELL_OPTS)
-SHELL_CMD:	$(SHELL_CMD)
+SHELL_OPTS:		$(SHELL_OPTS)
+SHELL_CMD:		$(SHELL_CMD)
 endef
 export SHELL_MAKE_VARS
 
@@ -528,26 +529,7 @@ DOCKER_VERSION_ALL_TARGETS: $(DOCKER_VERSION_ALL_TARGETS)
 endef
 export DOCKER_VERSION_MAKE_VARS
 
-### DOCKER_COMMON_TARGETS ######################################################
-
-.PHONY: docker-makevars
-docker-makevars:
-	@set -eo pipefail; \
-	( \
-		$(foreach DOCKER_VAR,$(MAKE_VARS), \
-			$(ECHO) "$${$(DOCKER_VAR)}"; \
-			$(ECHO); \
-		) \
-	) | sed -E \
-		-e $$'s/ +-/\\\n\\\t\\\t\\\t-/g' \
-		-e $$'s/ +([A-Z][A-Z]+)/\\\n\\\t\\\t\\\t\\1/g' \
-		-e $$'s/(;) */\\1\\\n\\\t\\\t\\\t/g'
-
-.PHONY: docker-set-config
-docker-set-config: docker-destroy
-	@set -eo pipefail; \
-	$(ECHO) $(DOCKER_CONFIG) > $(DOCKER_CONFIG_FILE); \
-	$(ECHO) "Setting executor configuration to $(DOCKER_CONFIG)"
+### BUILD_TARGETS ##############################################################
 
 # Build Docker image with cached layers
 .PHONY: docker-build
@@ -578,46 +560,45 @@ docker-tag:
 		$(ECHO); \
 	fi
 
-# Run shell in the container
-.PHONY: docker-shell
-docker-shell: docker-start
-	@set -eo pipefail; \
-	docker exec $(SHELL_OPTS) $(CONTAINER_NAME) $(SHELL_CMD)
+### EXECUTOR_TARGETS ###########################################################
 
-# Clean project
-.PHONY: docker-clean
-docker-clean: docker-stack-destroy docker-compose-destroy docker-container-destroy
-	@set -eo pipefail; \
-	rm -f .docker-*; \
-	find . -type f -name '*~' | xargs rm -f
-
-### DOCKER_EXECUTOR_TARGETS ####################################################
-
-# Display containers config
-.PHONY: docker-config
-docker-config: $(DOCKER_CONFIG_TARGET)
+# Display Docker Compose/Swarm configuration file
+.PHONY: diplay-config-file
+display-config-file: $(DISPLAY_CONFIG_FILE_TARGET)
 	@true
 
-# Start fresh containers
-.PHONY: docker-deploy
-docker-deploy:
-	@set -oe pipefail; \
-	$(MAKE) docker-destroy; \
-	$(MAKE) docker-start
+# Display make variables
+.PHONY: display-makevars
+display-makevars: display-executor-config
+	@set -eo pipefail; \
+	( \
+		$(foreach DOCKER_VAR,$(MAKE_VARS), \
+			$(ECHO) "$${$(DOCKER_VAR)}"; \
+			$(ECHO); \
+		) \
+	) | sed -E \
+		-e $$'s/ +-/\\\n\\\t\\\t\\\t-/g' \
+		-e $$'s/ +([A-Z][A-Z]+)/\\\n\\\t\\\t\\\t\\1/g' \
+		-e $$'s/(;) */\\1\\\n\\\t\\\t\\\t/g'
+
+# Display current executor configuration
+.PHONY: display-executor-config
+display-executor-config:
+	@set -eo pipefail; \
+	if [ -n "$(DOCKER_CONFIGS)" ]; then \
+		$(ECHO) "Using $(DOCKER_CONFIG) configuration with $(DOCKER_EXECUTOR) executor"; \
+	fi
+
+# Set Docker executor configuration
+.PHONY: set-executor-config
+set-executor-config: docker-destroy
+	@set -eo pipefail; \
+	$(ECHO) $(DOCKER_CONFIG) > $(DOCKER_CONFIG_FILE); \
+	$(ECHO) "Setting executor configuration to $(DOCKER_CONFIG)"
 
 # Start containers
 .PHONY: docker-start
-docker-start: $(DOCKER_START_TARGET)
-	@true
-
-# Stop containers
-.PHONY: docker-stop
-docker-stop: $(DOCKER_STOP_TARGET)
-	@true
-
-# Destroy containers
-.PHONY: docker-destroy
-docker-destroy: $(DOCKER_DESTROY_TARGET)
+docker-start: display-executor-config $(DOCKER_START_TARGET)
 	@true
 
 # Show info about running containers
@@ -635,15 +616,38 @@ docker-logs: $(DOCKER_LOGS_TARGET)
 docker-logs-tail: $(DOCKER_LOGS_TAIL_TARGET)
 	@true
 
+# Run shell in the container
+.PHONY: docker-shell
+docker-shell: docker-start
+	@set -eo pipefail; \
+	docker exec $(SHELL_OPTS) $(CONTAINER_NAME) $(SHELL_CMD)
+
 # Run tests
 .PHONY: docker-test
-docker-test: $(DOCKER_TEST_TARGET)
+docker-test: display-executor-config display-executor-config $(DOCKER_TEST_TARGET)
 	@true
+
+# Stop containers
+.PHONY: docker-stop
+docker-stop: $(DOCKER_STOP_TARGET)
+	@true
+
+# Destroy containers
+.PHONY: docker-destroy
+docker-destroy: $(DOCKER_DESTROY_TARGET)
+	@true
+
+# Clean project
+.PHONY: docker-clean
+docker-clean: docker-stack-destroy docker-compose-destroy docker-container-destroy
+	@set -eo pipefail; \
+	rm -f .docker-*; \
+	find . -type f -name '*~' | xargs rm -f
 
 ### CONTAINER_EXECUTOR_TARGET ##################################################
 
-.PHONY: docker-container-config
-docker-container-config:
+.PHONY: display-container-config-file
+display-container-config-file:
 	@true
 
 .PHONY: docker-container-create
@@ -715,8 +719,8 @@ docker-container-destroy: docker-container-stop
 ### COMPOSE_EXECUTOR_TARGETS ###################################################
 
 # Display containers configuraion
-.PHONY: docker-compose-config
-docker-compose-config:
+.PHONY: display-compose-config-file
+display-compose-config-file:
 	@set -eo pipefail; \
 	$(COMPOSE_CMD) config $(COMPOSE_CONFIG_OPTS)
 
@@ -755,7 +759,7 @@ docker-compose-logs-tail:
 docker-compose-test: docker-compose-start
 	@set -eo pipefail; \
 	$(ECHO) -n > $(TEST_ENV_FILE); \
-	$(foreach VAR,$(COMPOSE_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);) \
+	$(foreach VAR,$(TEST_COMPOSE_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);) \
 	$(COMPOSE_CMD) run --no-deps --rm $(TEST_SERVICE_NAME) $(TEST_CMD)
 
 # Stop containers
@@ -778,8 +782,10 @@ docker-compose-destroy:
 ### STACK_EXECUTOR_TARGETS #####################################################
 
 # Display stack configuraion
-.PHONY: docker-stack-config
-docker-stack-config: docker-compose-config
+.PHONY: display-stack-config-file
+display-stack-config-file:
+# TODO: Docker Swarm Stack executor
+	$(error Docker executor "stack" is not yet implemented)
 
 # Start fresh stack
 .PHONY: docker-stack-start
@@ -865,13 +871,14 @@ docker-push:
 docker-all:
 	@set -eo pipefail; \
 	for DOCKER_VERSION in $(DOCKER_VERSIONS); do \
-		cd $(abspath $(DOCKER_VARIANT_DIR))/$${DOCKER_VERSION}; \
-		if [ "$${DOCKER_VERSION}" = "." ]; then \
-			DOCKER_VERSION="latest"; \
+		if [ "$${DOCKER_VERSION}" = "latest" ]; then \
+			cd $(abspath $(DOCKER_VARIANT_DIR)); \
+		else \
+			cd $(abspath $(DOCKER_VARIANT_DIR))/$${DOCKER_VERSION}; \
 		fi; \
 		$(ECHO); \
 		$(ECHO); \
-		$(ECHO) "===> $(DOCKER_NAME):$${DOCKER_VERSION}"; \
+		$(ECHO) "===> $(DOCKER_IMAGE_NAME):$${DOCKER_VERSION}"; \
 		$(ECHO); \
 		$(ECHO); \
 		$(MAKE) $(DOCKER_TARGET); \
@@ -880,11 +887,11 @@ docker-all:
 # Create $(DOCKER_VERSION_ALL_TARGETS)-all targets
 # DOCKER_ALL_TARGET:
 # $1 - <TARGET>
-define DOCKER_ALL_TARGET
+define DOCKER_VERSION_ALL_TARGET
 .PHONY: $(1)-all
 $(1)-all: ; @set -eo pipefail; $(MAKE) docker-all DOCKER_TARGET=$(1)
 endef
-$(foreach DOCKER_TARGET,$(DOCKER_VERSION_ALL_TARGETS),$(eval $(call DOCKER_ALL_TARGET,$(DOCKER_TARGET))))
+$(foreach DOCKER_TARGET,$(DOCKER_VERSION_ALL_TARGETS),$(eval $(call DOCKER_VERSION_ALL_TARGET,$(DOCKER_TARGET))))
 
 ### CIRCLE_CI ##################################################################
 
