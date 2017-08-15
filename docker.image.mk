@@ -35,7 +35,7 @@ VCS_REF			?= $(shell git rev-parse --short HEAD)-devel
 BUILD_DATE		?= $(shell date -u "+%Y-%m-%d")
 endif
 
-### DIRS #######################################################################
+### PROJECT_DIRS ###############################################################
 
 # Project directories
 PROJECT_DIR		?= $(CURDIR)
@@ -53,7 +53,8 @@ BASE_IMAGE		?= $(BASE_IMAGE_NAME):$(BASE_IMAGE_TAG)
 # Docker name
 DOCKER_PROJECT		?= $(GITHUB_USER)
 DOCKER_NAME		?= $(shell echo $(GITHUB_REPOSITORY) | sed -E -e "s|^docker-||")
-DOCKER_IMAGE_TAG	?= $(BASE_IMAGE_TAG)
+DOCKER_PROJECT_DESC	?= $(GITHUB_USER)/$(GITHUB_REPOSITORY)
+DOCKER_PROJECT_URL	?= GITHUB_URL
 
 # Docker image name
 DOCKER_IMAGE_NAME	?= $(DOCKER_PROJECT)/$(DOCKER_NAME)
@@ -123,6 +124,18 @@ DOCKER_EXECUTOR_ID	:= $(shell \
 				fi \
 			   )
 
+# Support multiple executor configurations
+ifneq ($(DOCKER_CONFIGS),)
+DOCKER_CONFIG_FILE	?= .docker-config
+DOCKER_CONFIG		?= $(shell \
+				if [ -e $(DOCKER_CONFIG_FILE) ]; then \
+					cat $(DOCKER_CONFIG_FILE); \
+				else \
+					echo "default"; \
+				fi \
+			   )
+endif
+
 ### CONTAINER_EXECUTOR #########################################################
 
 # Docker container name
@@ -161,7 +174,12 @@ CONTAINER_RM_OPTS	+= --force
 ### COMPOSE_EXECUTOR ###########################################################
 
 # Docker Compose file
-COMPOSE_FILE		?= $(abspath $(PROJECT_DIR)/docker-compose.yml)
+ifeq ($(DOCKER_CONFIG),)
+COMPOSE_FILES		?= docker-compose.yml
+else
+COMPOSE_FILES		?= docker-compose.$(DOCKER_CONFIG).yml)
+endif
+COMPOSE_FILE		?= $(shell echo "$(foreach COMPOSE_FILE,$(COMPOSE_FILES),$(abspath $(PROJECT_DIR)/$(COMPOSE_FILE)))" | tr ' ' ':')
 
 # Docker Compose project name
 COMPOSE_NAME_FILE 	?= .docker-compose-name
@@ -195,7 +213,12 @@ COMPOSE_RM_OPTS		+= --remove-orphans
 ### STACK_EXECUTOR #############################################################
 
 # Docker Stack file
+ifneq ($(DOCKER_CONFIGS),)
 STACK_FILE		?= $(abspath $(PROJECT_DIR)/docker-stack.yml)
+else
+STACK_FILE		?= $(abspath $(PROJECT_DIR)/docker-stack.$(DOCKER_CONFIG).yml)
+endif
+
 
 # Docker Stack project name
 STACK_NAME		?= $(DOCKER_EXECUTOR_ID)
@@ -329,10 +352,10 @@ MAKE_VARS		?= GITHUB_MAKE_VARS \
 			   BASE_IMAGE_MAKE_VARS \
 			   DOCKER_IMAGE_MAKE_VARS \
 			   BUILD_MAKE_VARS \
-			   DOCKER_EXECUTOR_MAKE_VARS \
+			   EXECUTOR_MAKE_VARS \
 			   SHELL_MAKE_VARS \
 			   DOCKER_REGISTRY_MAKE_VARS \
-			   SUBDIR_ALL_TARGETS_MAKE_VARS
+			   DOCKER_VERSION_MAKE_VARS
 
 define GITHUB_MAKE_VARS
 GITHUB_URL:		$(GITHUB_URL)
@@ -353,6 +376,8 @@ export BASE_IMAGE_MAKE_VARS
 
 define DOCKER_IMAGE_MAKE_VARS
 DOCKER_PROJECT:		$(DOCKER_PROJECT)
+DOCKER_PROJECT_DESC:	$(DOCKER_PROJECT_DESC)
+DOCKER_PROJECT_URL:	$(DOCKER_PROJECT_URL)
 DOCKER_NAME:		$(DOCKER_NAME)
 DOCKER_IMAGE_TAG:	$(DOCKER_IMAGE_TAG)
 DOCKER_IMAGE_TAGS:	$(DOCKER_IMAGE_TAGS)
@@ -373,8 +398,15 @@ BUILD_OPTS:		$(BUILD_OPTS)
 endef
 export BUILD_MAKE_VARS
 
-define DOCKER_EXECUTOR_COMMON
+define EXECUTOR_COMMON
 DOCKER_EXECUTOR:	$(DOCKER_EXECUTOR)
+DOCKER_EXECUTOR_ID_FILE: $(DOCKER_EXECUTOR_ID_FILE)
+DOCKER_EXECUTOR_ID:	$(DOCKER_EXECUTOR_ID)
+
+DOCKER_CONFIGS:		$(DOCKER_CONFIGS)
+DOCKER_CONFIG:		$(DOCKER_CONFIG)
+DOCKER_CONFIG_FILE:	$(DOCKER_CONFIG_FILE)
+
 DOCKER_CONFIG_TARGET:	$(DOCKER_CONFIG_TARGET)
 DOCKER_START_TARGET:	$(DOCKER_START_TARGET)
 DOCKER_PS_TARGET:	$(DOCKER_PS_TARGET)
@@ -383,15 +415,12 @@ DOCKER_LOGS_TAIL_TARGET: $(DOCKER_LOGS_TAIL_TARGET)
 DOCKER_TEST_TARGET:	$(DOCKER_TEST_TARGET)
 DOCKER_STOP_TARGET:	$(DOCKER_STOP_TARGET)
 DOCKER_DESTROY_TARGET:	$(DOCKER_DESTROY_TARGET)
-
-DOCKER_EXECUTOR_ID_FILE: $(DOCKER_EXECUTOR_ID_FILE)
-DOCKER_EXECUTOR_ID:	$(DOCKER_EXECUTOR_ID)
 endef
-export DOCKER_EXECUTOR_COMMON
+export EXECUTOR_COMMON
 
 ifeq ($(DOCKER_EXECUTOR),container)
-define DOCKER_EXECUTOR_MAKE_VARS
-$(DOCKER_EXECUTOR_COMMON)
+define EXECUTOR_MAKE_VARS
+$(EXECUTOR_COMMON)
 
 CONTAINER_NAME:		$(CONTAINER_NAME)
 CONTAINER_USER:		$(CONTAINER_USER)
@@ -416,17 +445,17 @@ TEST_CONTAINER_OPTS:	$(TEST_CONTAINER_OPTS)
 
 RSPEC_FORMAT:		$(RSPEC_FORMAT)
 SPEC_OPTS:		$(SPEC_OPTS)
-
 endef
 else ifeq ($(DOCKER_EXECUTOR),compose)
-define DOCKER_EXECUTOR_MAKE_VARS
-$(DOCKER_EXECUTOR_COMMON)
+define EXECUTOR_MAKE_VARS
+$(EXECUTOR_COMMON)
 
 CONTAINER_NAME:		$(CONTAINER_NAME)
 
+COMPOSE_FILES:		$(COMPOSE_FILES)
 COMPOSE_FILE:		$(COMPOSE_FILE)
 COMPOSE_NAME:		$(COMPOSE_NAME)
-COMPOSE_NAME_FILE: $(COMPOSE_NAME_FILE)
+COMPOSE_NAME_FILE: 	$(COMPOSE_NAME_FILE)
 COMPOSE_PROJECT_NAME:	$(COMPOSE_PROJECT_NAME)
 COMPOSE_SERVICE_NAME:	$(COMPOSE_SERVICE_NAME)
 COMPOSE_VARS:		$(COMPOSE_VARS)
@@ -447,11 +476,14 @@ TEST_CONTAINER_NAME:	$(TEST_CONTAINER_NAME)
 TEST_VARS:		$(TEST_VARS)
 TEST_COMPOSE_VARS:	$(TEST_COMPOSE_VARS)
 TEST_COMPOSE_CMD:	$(TEST_COMPOSE_CMD)
+
+RSPEC_FORMAT:		$(RSPEC_FORMAT)
+SPEC_OPTS:		$(SPEC_OPTS)
 endef
 
-else ifeq ($(DOCKER_EXECUTOR),compose)
-define DOCKER_EXECUTOR_MAKE_VARS
-$(DOCKER_EXECUTOR_COMMON)
+else ifeq ($(DOCKER_EXECUTOR),stack)
+define EXECUTOR_MAKE_VARS
+$(EXECUTOR_COMMON)
 
 CONTAINER_NAME:		$(CONTAINER_NAME)
 
@@ -468,9 +500,12 @@ TEST_CONTAINER_NAME:	$(TEST_CONTAINER_NAME)
 TEST_VARS:		$(TEST_VARS)
 TEST_STACK_VARS:	$(TEST_STACK_VARS)
 TEST_STACK_CMD:		$(TEST_STACK_CMD)
+
+RSPEC_FORMAT:		$(RSPEC_FORMAT)
+SPEC_OPTS:		$(SPEC_OPTS)
 endef
 endif
-export DOCKER_EXECUTOR_MAKE_VARS
+export EXECUTOR_MAKE_VARS
 
 define SHELL_MAKE_VARS
 SHELL_OPTS:	$(SHELL_OPTS)
@@ -491,7 +526,7 @@ DOCKER_VARIANT_DIR:	$(DOCKER_VARIANT_DIR)
 DOCKER_VERSIONS:	$(DOCKER_VERSIONS)
 DOCKER_VERSION_ALL_TARGETS: $(DOCKER_VERSION_ALL_TARGETS)
 endef
-export SUBDIR_ALL_TARGETS_MAKE_VARS
+export DOCKER_VERSION_MAKE_VARS
 
 ### DOCKER_COMMON_TARGETS ######################################################
 
@@ -507,6 +542,12 @@ docker-makevars:
 		-e $$'s/ +-/\\\n\\\t\\\t\\\t-/g' \
 		-e $$'s/ +([A-Z][A-Z]+)/\\\n\\\t\\\t\\\t\\1/g' \
 		-e $$'s/(;) */\\1\\\n\\\t\\\t\\\t/g'
+
+.PHONY: docker-set-config
+docker-set-config: docker-destroy
+	@set -eo pipefail; \
+	$(ECHO) $(DOCKER_CONFIG) > $(DOCKER_CONFIG_FILE); \
+	$(ECHO) "Setting executor configuration to $(DOCKER_CONFIG)"
 
 # Build Docker image with cached layers
 .PHONY: docker-build
