@@ -205,6 +205,7 @@ COMPOSE_VARS		+= $(CONTAINER_VARS) \
 			   CURDIR \
 			   TEST_DIR \
 			   TEST_ENV_FILE \
+			   TEST_PROJECT_VOLUME \
 			   DOCKER_VARIANT_DIR
 
 # Docker Compose command
@@ -213,10 +214,10 @@ COMPOSE_CMD		?= touch $(TEST_ENV_FILE); \
 			   docker-compose
 
 # Docker Compose up options
-COMPOSE_UP_OPTS		+= -d --no-build
+COMPOSE_UP_OPTS		+= -d --no-build --remove-orphans
 
 # Docker Compose down
-COMPOSE_RM_OPTS		+= --remove-orphans
+COMPOSE_RM_OPTS		+= --remove-orphans -v
 
 ### STACK_EXECUTOR #############################################################
 
@@ -242,6 +243,7 @@ STACK_VARS		+= $(COMPOSE_VARS) \
 			   CURDIR \
 			   TEST_DIR \
 			   TEST_ENV_FILE \
+			   TEST_PROJECT_VOLUME \
 			   DOCKER_VARIANT_DIR
 
 # TODO: Docker Swarm Stack executor
@@ -258,6 +260,13 @@ TEST_CONTAINER_NAME 	?= $(DOCKER_EXECUTOR_ID)_$(TEST_SERVICE_NAME)
 
 # Docker Compose/Swarm test service name
 TEST_SERVICE_NAME	?= test
+
+# CircleCI does not allow to use host volmes with docker executor
+ifeq ($(CIRCLECI),true)
+TEST_PROJECT_VOLUME	=
+else
+TEST_PROJECT_VOLUME	= $(PROJECT_DIR)
+endif
 
 
 # Test conatainer variables
@@ -447,6 +456,7 @@ TEST_IMAGE_TAG:		$(TEST_IMAGE_TAG)
 TEST_IMAGE:		$(TEST_IMAGE)
 TEST_DIR:		$(TEST_DIR)
 TEST_CONTAINER_NAME:	$(TEST_CONTAINER_NAME)
+TEST_PROJECT_VOLUME:	$(TEST_PROJECT_VOLUME)
 TEST_VARS:		$(TEST_VARS)
 TEST_CONTAINER_VARS:	$(TEST_CONTAINER_VARS)
 TEST_CONTAINER_OPTS:	$(TEST_CONTAINER_OPTS)
@@ -476,10 +486,12 @@ COMPOSE_LOGS_OPTS: 	$(COMPOSE_LOGS_OPTS)
 COMPOSE_STOP_OPTS: 	$(COMPOSE_STOP_OPTS)
 COMPOSE_RM_OPTS:	$(COMPOSE_RM_OPTS)
 
+CIRCLECI:		$(CIRCLECI)
 TEST_IMAGE_NAME:	$(TEST_IMAGE_NAME)
 TEST_IMAGE_TAG:		$(TEST_IMAGE_TAG)
 TEST_IMAGE:		$(TEST_IMAGE)
 TEST_DIR:		$(TEST_DIR)
+TEST_PROJECT_VOLUME:	$(TEST_PROJECT_VOLUME)
 TEST_ENV_FILE:		$(TEST_ENV_FILE)
 TEST_VARS:		$(TEST_VARS)
 TEST_COMPOSE_VARS:	$(TEST_COMPOSE_VARS)
@@ -503,6 +515,7 @@ TEST_IMAGE_NAME:	$(TEST_IMAGE_NAME)
 TEST_IMAGE_TAG:		$(TEST_IMAGE_TAG)
 TEST_IMAGE:		$(TEST_IMAGE)
 TEST_DIR:		$(TEST_DIR)
+TEST_PROJECT_VOLUME:	$(TEST_PROJECT_VOLUME)
 TEST_ENV_FILE:		$(TEST_ENV_FILE)
 TEST_VARS:		$(TEST_VARS)
 TEST_STACK_VARS:	$(TEST_STACK_VARS)
@@ -737,7 +750,7 @@ docker-compose-start:
 	@set -eo pipefail; \
 	$(ECHO) "$(COMPOSE_NAME)" > $(COMPOSE_NAME_FILE); \
 	cd $(PROJECT_DIR); \
-	$(COMPOSE_CMD) up $(COMPOSE_UP_OPTS) $(COMPOSE_STOP_OPTS) $(COMPOSE_RM_OPTS) $(COMPOSE_SERVICE_NAME)
+	$(COMPOSE_CMD) up $(COMPOSE_UP_OPTS) $(COMPOSE_SERVICE_NAME)
 
 # List running containers
 .PHONY: docker-compose-ps
@@ -767,7 +780,12 @@ docker-compose-test: docker-compose-start
 	@set -eo pipefail; \
 	$(ECHO) -n > $(TEST_ENV_FILE); \
 	$(foreach VAR,$(TEST_COMPOSE_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);) \
-	$(COMPOSE_CMD) run --no-deps --rm $(TEST_SERVICE_NAME) $(TEST_CMD)
+	$(COMPOSE_CMD) create --no-build $(TEST_SERVICE_NAME); \
+	if [ -z "$(TEST_PROJECT_VOLUME)" ]; then \
+		docker cp $(PROJECT_DIR) $(TEST_CONTAINER_NAME)_1:$(dir $(PROJECT_DIR)); \
+	fi; \
+	$(COMPOSE_CMD) run --no-deps $(TEST_SERVICE_NAME) $(TEST_CMD); \
+	$(COMPOSE_CMD) rm --force --stop -v $(TEST_SERVICE_NAME)
 
 # Stop containers
 .PHONY: docker-compose-stop
