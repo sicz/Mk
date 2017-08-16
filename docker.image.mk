@@ -820,7 +820,7 @@ docker-stack-logs-tail:
 
 # Run tests
 .PHONY: docker-stack-test
-docker-stack-test: docker-stack-start $(TEST_ENV_FILE)
+docker-stack-test: docker-stack-start
 # TODO: Docker Swarm Stack executor
 	@set -eo pipefail; \
 	rm -f $(TEST_ENV_FILE); \
