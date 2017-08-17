@@ -5,6 +5,11 @@ ifeq ($(realpath $(SHELL)),/bin/dash)
 SHELL   := /bin/bash
 endif
 
+# Exit immediately if a command exits with a non-zero status
+# TODO: .SHELLFLAGS does not exists on obsoleted macOs X-Code make
+# .SHELLFLAGS		= -ec
+SHELL			+= -e
+
 ### GITHUB #####################################################################
 
 # GitHub repository
@@ -111,14 +116,9 @@ BUILD_VARS		+= BASE_IMAGE \
 # stack - Docker Swarm stack
 DOCKER_EXECUTOR		?= container
 
-DISPLAY_CONFIG_FILE_TARGET ?= display-$(DOCKER_EXECUTOR)-config-file
-DOCKER_START_TARGET	?= docker-$(DOCKER_EXECUTOR)-start
-DOCKER_PS_TARGET	?= docker-$(DOCKER_EXECUTOR)-ps
-DOCKER_LOGS_TARGET	?= docker-$(DOCKER_EXECUTOR)-logs
-DOCKER_LOGS_TAIL_TARGET	?= docker-$(DOCKER_EXECUTOR)-logs-tail
-DOCKER_TEST_TARGET	?= docker-$(DOCKER_EXECUTOR)-test
-DOCKER_STOP_TARGET	?= docker-$(DOCKER_EXECUTOR)-stop
-DOCKER_DESTROY_TARGET	?= docker-$(DOCKER_EXECUTOR)-destroy
+# Hi-level targets to create and start containers
+CREATE_TARGET		?= create
+START_TARGET		?= start
 
 # Unique project id
 DOCKER_EXECUTOR_ID_FILE	?= .docker-executor-id
@@ -145,19 +145,22 @@ endif
 
 ### CONTAINER_EXECUTOR #########################################################
 
+# Docker service name
+SERVICE_NAME		?= $(shell echo $(DOCKER_NAME) | sed -E -e "s/[^[:alnum:]_]+/_/g")
+
 # Docker container name
 ifeq ($(DOCKER_EXECUTOR),container)
-CONTAINER_NAME		?= $(shell \
-				echo "$(DOCKER_EXECUTOR_ID)_$(DOCKER_NAME)" | \
-				sed -E -e "s/[^[:alnum:]_]+/_/g" \
-			   )
+CONTAINER_NAME		?= $(DOCKER_EXECUTOR_ID)_$(SERVICE_NAME)
+TEST_CONTAINER_NAME	?= $(DOCKER_EXECUTOR_ID)_$(TEST_SERVICE_NAME)
 else ifeq ($(DOCKER_EXECUTOR),compose)
 CONTAINER_NAME		?= $(DOCKER_EXECUTOR_ID)_$(COMPOSE_SERVICE_NAME)_1
+TEST_CONTAINER_NAME	?= $(DOCKER_EXECUTOR_ID)_$(TEST_SERVICE_NAME)_1
 else ifeq ($(DOCKER_EXECUTOR),stack)
 # TODO: Docker Swarm Stack executor
 CONTAINER_NAME		?= $(DOCKER_EXECUTOR_ID)_$(STACK_SERVICE_NAME)_1
+TEST_CONTAINER_NAME	?= $(DOCKER_EXECUTOR_ID)_$(TEST_SERVICE_NAME)_1
 else
-$(error Unknown Docker executor "$(DOCKER_ERROR)")
+$(error Unknown Docker executor "$(DOCKER_EXECUTOR)")
 endif
 
 # Variables available in running container
@@ -184,17 +187,17 @@ CONTAINER_RM_OPTS	+= --force
 ifeq ($(DOCKER_CONFIG),)
 COMPOSE_FILES		?= docker-compose.yml
 else
-COMPOSE_FILES		?= docker-compose.$(DOCKER_CONFIG).yml)
+COMPOSE_FILES		?= docker-compose.yml \
+			   docker-compose.$(DOCKER_CONFIG).yml
 endif
 COMPOSE_FILE		?= $(shell echo "$(foreach COMPOSE_FILE,$(COMPOSE_FILES),$(abspath $(PROJECT_DIR)/$(COMPOSE_FILE)))" | tr ' ' ':')
 
 # Docker Compose project name
-COMPOSE_NAME_FILE 	?= .docker-compose-name
 COMPOSE_NAME		?= $(DOCKER_EXECUTOR_ID)
 COMPOSE_PROJECT_NAME	?= $(COMPOSE_NAME)
 
 # Docker Compose service name
-COMPOSE_SERVICE_NAME	?= $(shell echo $(DOCKER_NAME) | sed -E -e "s/[^[:alnum:]_]+/_/g")
+COMPOSE_SERVICE_NAME	?= $(SERVICE_NAME)
 
 # Variables used in Docker Compose file
 COMPOSE_VARS		+= $(CONTAINER_VARS) \
@@ -203,10 +206,10 @@ COMPOSE_VARS		+= $(CONTAINER_VARS) \
 			   PROJECT_DIR \
 			   BUILD_DIR \
 			   CURDIR \
+			   TEST_CMD \
 			   TEST_DIR \
 			   TEST_ENV_FILE \
 			   TEST_IMAGE \
-			   TEST_PROJECT_VOLUME \
 			   DOCKER_VARIANT_DIR
 
 # Docker Compose command
@@ -214,8 +217,11 @@ COMPOSE_CMD		?= touch $(TEST_ENV_FILE); \
 			   export $(foreach DOCKER_VAR,$(COMPOSE_VARS),$(DOCKER_VAR)="$($(DOCKER_VAR))"); \
 			   docker-compose
 
+# Docker Compose create options
+COMPOSE_CREATE_OPTS	+= --no-build
+
 # Docker Compose up options
-COMPOSE_UP_OPTS		+= -d --no-build --remove-orphans
+COMPOSE_UP_OPTS		+= -d --remove-orphans $(COMPOSE_CREATE_OPTS)
 
 # Docker Compose down
 COMPOSE_RM_OPTS		+= --remove-orphans -v
@@ -234,7 +240,7 @@ endif
 STACK_NAME		?= $(DOCKER_EXECUTOR_ID)
 
 # Docker Compose service name
-STACK_SERVICE_NAME	?= $(shell echo $(CONTAINER_NAME_HELPER) | sed -E -e "s/[^[:alnum:]_]+/_/g")
+STACK_SERVICE_NAME	?= $(SERVICE_NAME)
 
 # Variables used in Docker Stack file
 STACK_VARS		+= $(COMPOSE_VARS) \
@@ -245,7 +251,6 @@ STACK_VARS		+= $(COMPOSE_VARS) \
 			   TEST_DIR \
 			   TEST_ENV_FILE \
 			   TEST_IMAGE \
-			   TEST_PROJECT_VOLUME \
 			   DOCKER_VARIANT_DIR
 
 # TODO: Docker Swarm Stack executor
@@ -257,19 +262,8 @@ TEST_IMAGE_NAME		?= sicz/dockerspec
 TEST_IMAGE_TAG		?= latest
 TEST_IMAGE		?= $(TEST_IMAGE_NAME):$(TEST_IMAGE_TAG)
 
-# Docker test container name and opts
-TEST_CONTAINER_NAME 	?= $(DOCKER_EXECUTOR_ID)_$(TEST_SERVICE_NAME)
-
 # Docker Compose/Swarm test service name
 TEST_SERVICE_NAME	?= test
-
-# CircleCI does not allow to use host volmes with docker executor
-ifeq ($(CIRCLECI),true)
-TEST_PROJECT_VOLUME	=
-else
-TEST_PROJECT_VOLUME	= $(PROJECT_DIR)
-endif
-
 
 # Test conatainer variables
 TEST_VARS		+= CONTAINER_NAME \
@@ -295,7 +289,7 @@ TEST_CONTAINER_OPTS	+= --interactive \
 			   --rm
 
 # File containing environment variables for the tests
-TEST_ENV_FILE		?= $(CURDIR)/.docker-test-env
+TEST_ENV_FILE		?= $(CURDIR)/.docker-$(DOCKER_EXECUTOR)-test-env
 
 # Test command
 TEST_CMD		?= rspec
@@ -307,7 +301,7 @@ SPEC_OPTS		+= --format $(RSPEC_FORMAT)
 endif
 
 # CircleCI configuration file
-CIRCLE_CONFIG_FILE	?= $(PROJECT_DIR)/.circleci/config.yml
+CIRCLECI_CONFIG_FILE	?= $(PROJECT_DIR)/.circleci/config.yml
 
 ### SHELL ######################################################################
 
@@ -335,7 +329,7 @@ DOCKER_IMAGE_DEPENDENCIES += $(BASE_IMAGE)
 ### DOCKER_VERSION #############################################################
 
 DOCKER_VERSIONS		?= latest
-DOCKER_VERSION_ALL_TARGETS += docker-pull \
+DOCKER_ALL_VERSIONS_TARGETS += docker-pull \
 			   docker-pull-images \
 			   docker-pull-dependencies \
 			   docker-pull-testimage \
@@ -427,21 +421,16 @@ DOCKER_CONFIGS:		$(DOCKER_CONFIGS)
 DOCKER_CONFIG:		$(DOCKER_CONFIG)
 DOCKER_CONFIG_FILE:	$(DOCKER_CONFIG_FILE)
 
-DISPLAY_CONFIG_FILE_TARGET: $(DISPLAY_CONFIG_FILE_TARGET)
-DOCKER_START_TARGET:	$(DOCKER_START_TARGET)
-DOCKER_PS_TARGET:	$(DOCKER_PS_TARGET)
-DOCKER_LOGS_TARGET:	$(DOCKER_LOGS_TARGET)
-DOCKER_LOGS_TAIL_TARGET: $(DOCKER_LOGS_TAIL_TARGET)
-DOCKER_TEST_TARGET:	$(DOCKER_TEST_TARGET)
-DOCKER_STOP_TARGET:	$(DOCKER_STOP_TARGET)
-DOCKER_DESTROY_TARGET:	$(DOCKER_DESTROY_TARGET)
+CREATE_TARGET:		$(CREATE_TARGET)
+START_TARGET:		$(START_TARGET)
+
+SERVICE_NAME:		$(SERVICE_NAME)
 endef
 export EXECUTOR_COMMON
 
 ifeq ($(DOCKER_EXECUTOR),container)
 define EXECUTOR_MAKE_VARS
 $(EXECUTOR_COMMON)
-
 CONTAINER_NAME:		$(CONTAINER_NAME)
 CONTAINER_USER:		$(CONTAINER_USER)
 CONTAINER_CMD:		$(CONTAINER_CMD)
@@ -457,8 +446,9 @@ TEST_IMAGE_NAME:	$(TEST_IMAGE_NAME)
 TEST_IMAGE_TAG:		$(TEST_IMAGE_TAG)
 TEST_IMAGE:		$(TEST_IMAGE)
 TEST_DIR:		$(TEST_DIR)
+TEST_SERVICE_NAME:	$(TEST_SERVICE_NAME)
 TEST_CONTAINER_NAME:	$(TEST_CONTAINER_NAME)
-TEST_PROJECT_VOLUME:	$(TEST_PROJECT_VOLUME)
+TEST_CONTAINER_NAME:	$(TEST_CONTAINER_NAME)
 TEST_VARS:		$(TEST_VARS)
 TEST_CONTAINER_VARS:	$(TEST_CONTAINER_VARS)
 TEST_CONTAINER_OPTS:	$(TEST_CONTAINER_OPTS)
@@ -470,13 +460,11 @@ endef
 else ifeq ($(DOCKER_EXECUTOR),compose)
 define EXECUTOR_MAKE_VARS
 $(EXECUTOR_COMMON)
-
 CONTAINER_NAME:		$(CONTAINER_NAME)
 
 COMPOSE_FILES:		$(COMPOSE_FILES)
 COMPOSE_FILE:		$(COMPOSE_FILE)
 COMPOSE_NAME:		$(COMPOSE_NAME)
-COMPOSE_NAME_FILE: 	$(COMPOSE_NAME_FILE)
 COMPOSE_PROJECT_NAME:	$(COMPOSE_PROJECT_NAME)
 COMPOSE_SERVICE_NAME:	$(COMPOSE_SERVICE_NAME)
 COMPOSE_VARS:		$(COMPOSE_VARS)
@@ -493,8 +481,9 @@ TEST_IMAGE_NAME:	$(TEST_IMAGE_NAME)
 TEST_IMAGE_TAG:		$(TEST_IMAGE_TAG)
 TEST_IMAGE:		$(TEST_IMAGE)
 TEST_DIR:		$(TEST_DIR)
-TEST_PROJECT_VOLUME:	$(TEST_PROJECT_VOLUME)
 TEST_ENV_FILE:		$(TEST_ENV_FILE)
+TEST_SERVICE_NAME:	$(TEST_SERVICE_NAME)
+TEST_CONTAINER_NAME:	$(TEST_CONTAINER_NAME)
 TEST_VARS:		$(TEST_VARS)
 TEST_COMPOSE_VARS:	$(TEST_COMPOSE_VARS)
 
@@ -506,7 +495,6 @@ endef
 else ifeq ($(DOCKER_EXECUTOR),stack)
 define EXECUTOR_MAKE_VARS
 $(EXECUTOR_COMMON)
-
 CONTAINER_NAME:		$(CONTAINER_NAME)
 
 STACK_FILE:		$(STACK_FILE)
@@ -517,8 +505,9 @@ TEST_IMAGE_NAME:	$(TEST_IMAGE_NAME)
 TEST_IMAGE_TAG:		$(TEST_IMAGE_TAG)
 TEST_IMAGE:		$(TEST_IMAGE)
 TEST_DIR:		$(TEST_DIR)
-TEST_PROJECT_VOLUME:	$(TEST_PROJECT_VOLUME)
 TEST_ENV_FILE:		$(TEST_ENV_FILE)
+TEST_SERVICE_NAME:	$(TEST_SERVICE_NAME)
+TEST_CONTAINER_NAME:	$(TEST_CONTAINER_NAME)
 TEST_VARS:		$(TEST_VARS)
 TEST_STACK_VARS:	$(TEST_STACK_VARS)
 TEST_STACK_CMD:		$(TEST_STACK_CMD)
@@ -547,7 +536,7 @@ export DOCKER_REGISTRY_MAKE_VARS
 define DOCKER_VERSION_MAKE_VARS
 DOCKER_VARIANT_DIR:	$(DOCKER_VARIANT_DIR)
 DOCKER_VERSIONS:	$(DOCKER_VERSIONS)
-DOCKER_VERSION_ALL_TARGETS: $(DOCKER_VERSION_ALL_TARGETS)
+DOCKER_ALL_VERSIONS_TARGETS: $(DOCKER_ALL_VERSIONS_TARGETS)
 endef
 export DOCKER_VERSION_MAKE_VARS
 
@@ -556,49 +545,46 @@ export DOCKER_VERSION_MAKE_VARS
 # Build Docker image with cached layers
 .PHONY: docker-build
 docker-build:
-	@set -eo pipefail; \
-	$(ECHO) "Build date: $(BUILD_DATE)"; \
-	$(ECHO) "Git revision: $(VCS_REF)"; \
-	docker build $(BUILD_OPTS) -f $(BUILD_DOCKER_FILE) $(BUILD_DIR)
+	@$(ECHO) "Build date $(BUILD_DATE)"
+	@$(ECHO) "Git revision $(VCS_REF)"
+	@$(ECHO) "Building image $(DOCKER_IMAGE)"
+	@docker build $(BUILD_OPTS) -f $(BUILD_DOCKER_FILE) $(BUILD_DIR)
 
 # Build Docker image without cached layers
 .PHONY: docker-rebuild
 docker-rebuild:
-	@set -eo pipefail; \
-	$(ECHO) "Build date: $(BUILD_DATE)"; \
-	$(ECHO) "Git revision: $(VCS_REF)"; \
-	docker build $(BUILD_OPTS) -f $(BUILD_DOCKER_FILE) --no-cache $(BUILD_DIR)
+	@$(ECHO) "Build date $(BUILD_DATE)"
+	@$(ECHO) "Git revision $(VCS_REF)"
+	@$(ECHO) "Rebilding image $(DOCKER_IMAGE)"
+	@docker build $(BUILD_OPTS) -f $(BUILD_DOCKER_FILE) --no-cache $(BUILD_DIR)
 
 # Tag Docker image
 .PHONY: docker-tag
 docker-tag:
-	@set -eo pipefail; \
-	if [ -n "$(DOCKER_IMAGE_TAGS)" ]; then \
-		$(ECHO) -n "Tagging image with tags: "; \
-		for DOCKER_IMAGE_TAG in $(DOCKER_IMAGE_TAGS); do \
-			$(ECHO) -n "$${DOCKER_IMAGE_TAG}"; \
-			docker tag $(DOCKER_IMAGE) $(DOCKER_IMAGE_NAME):$${DOCKER_IMAGE_TAG}; \
-		done; \
-		$(ECHO); \
-	fi
+ifneq ($(DOCKER_IMAGE_TAGS),)
+	@$(ECHO) "Tagging image with tags $(DOCKER_IMAGE_TAGS)"
+	@$(foreach TAG,$(DOCKER_IMAGE_TAGS), \
+		docker tag $(DOCKER_IMAGE) $(DOCKER_IMAGE_NAME):$(TAG); \
+	)
+endif
 
 ### EXECUTOR_TARGETS ###########################################################
 
-# Display Docker Compose/Swarm configuration file
+# Display containers configuration file
 .PHONY: diplay-config-file
-display-config-file: $(DISPLAY_CONFIG_FILE_TARGET)
+display-config-file: display-$(DOCKER_EXECUTOR)-config-file
 	@true
 
 # Display make variables
 .PHONY: display-makevars
 display-makevars: display-executor-config
 	@set -eo pipefail; \
-	( \
+	 ( \
 		$(foreach DOCKER_VAR,$(MAKE_VARS), \
 			$(ECHO) "$${$(DOCKER_VAR)}"; \
 			$(ECHO); \
 		) \
-	) | sed -E \
+	 ) | sed -E \
 		-e $$'s/ +-/\\\n\\\t\\\t\\\t-/g' \
 		-e $$'s/ +([A-Z][A-Z]+)/\\\n\\\t\\\t\\\t\\1/g' \
 		-e $$'s/(;) */\\1\\\n\\\t\\\t\\\t/g'
@@ -606,205 +592,219 @@ display-makevars: display-executor-config
 # Display current executor configuration
 .PHONY: display-executor-config
 display-executor-config:
-	@set -eo pipefail; \
-	if [ -n "$(DOCKER_CONFIGS)" ]; then \
-		$(ECHO) "Using $(DOCKER_CONFIG) configuration with $(DOCKER_EXECUTOR) executor"; \
-	fi
+ifneq ($(DOCKER_CONFIGS),)
+	@$(ECHO) "Using $(DOCKER_CONFIG) configuration with $(DOCKER_EXECUTOR) executor"
+endif
 
 # Set Docker executor configuration
 .PHONY: set-executor-config
 set-executor-config: docker-destroy
-	@set -eo pipefail; \
-	$(ECHO) $(DOCKER_CONFIG) > $(DOCKER_CONFIG_FILE); \
-	$(ECHO) "Setting executor configuration to $(DOCKER_CONFIG)"
+ifneq ($(DOCKER_CONFIGS),)
+ifeq ($(filter $(DOCKER_CONFIG),$(DOCKER_CONFIGS)),)
+	$(error Unsupported Docker executor configuration "$(DOCKER_CONFIG)")
+endif
+	@$(ECHO) $(DOCKER_CONFIG) > $(DOCKER_CONFIG_FILE)
+	@$(ECHO) "Setting executor configuration to $(DOCKER_CONFIG)"
+else
+	$(error Docker executor does not support multiple configs)
+endif
+
+# Create containers
+.PHONY: docker-create
+docker-create: display-executor-config docker-$(DOCKER_EXECUTOR)-create
+	@true
 
 # Start containers
 .PHONY: docker-start
-docker-start: display-executor-config $(DOCKER_START_TARGET)
+docker-start: display-executor-config docker-$(DOCKER_EXECUTOR)-start
 	@true
 
-# Show info about running containers
+# List running containers
 .PHONY: docker-ps
-docker-ps: $(DOCKER_PS_TARGET)
+docker-ps: docker-$(DOCKER_EXECUTOR)-ps
 	@true
 
-# Show containers logs
+# Display containers logs
 .PHONY: docker-logs
-docker-logs: $(DOCKER_LOGS_TARGET)
+docker-logs: docker-$(DOCKER_EXECUTOR)-logs
 	@true
 
 # Follow containers logs
 .PHONY: docker-logs-tail
-docker-logs-tail: $(DOCKER_LOGS_TAIL_TARGET)
+docker-logs-tail: docker-$(DOCKER_EXECUTOR)-logs-tail
 	@true
 
 # Run shell in the container
 .PHONY: docker-shell
-docker-shell: docker-start
+docker-shell: $(START_TARGET)
 	@set -eo pipefail; \
 	docker exec $(SHELL_OPTS) $(CONTAINER_NAME) $(SHELL_CMD)
 
 # Run tests
 .PHONY: docker-test
-docker-test: display-executor-config display-executor-config $(DOCKER_TEST_TARGET)
+docker-test: display-executor-config docker-$(DOCKER_EXECUTOR)-test
 	@true
 
 # Stop containers
 .PHONY: docker-stop
-docker-stop: $(DOCKER_STOP_TARGET)
+docker-stop: docker-$(DOCKER_EXECUTOR)-stop
 	@true
 
 # Destroy containers
 .PHONY: docker-destroy
-docker-destroy: $(DOCKER_DESTROY_TARGET)
+docker-destroy: docker-$(DOCKER_EXECUTOR)-destroy
 	@true
 
-# Clean project
+# Destroy all containers and remove working files
 .PHONY: docker-clean
 docker-clean: docker-stack-destroy docker-compose-destroy docker-container-destroy
-	@set -eo pipefail; \
-	rm -f .docker-*; \
-	find . -type f -name '*~' | xargs rm -f
+	@rm -f .docker-*
+	@find . -type f -name '*~' | xargs rm -f
 
 ### CONTAINER_EXECUTOR_TARGET ##################################################
 
+# Display container configuration
 .PHONY: display-container-config-file
 display-container-config-file:
+	@$(MAKE) display-makevars MAKE_VARS="$(DOCKER_EXECUTOR_MAKE_VARS)"
+
+# Create container
+.PHONY: docker-container-create
+docker-container-create: .docker-container-create
 	@true
 
-.PHONY: docker-container-create
-docker-container-create:
-	@set -eo pipefail; \
-	if [ -z "$$(docker container ls --all --quiet --filter 'name=^/$(CONTAINER_NAME)$$')" ]; then \
-		$(ECHO) -n "Creating container: "; \
-		docker create $(CONTAINER_CREATE_OPTS) --name $(CONTAINER_NAME) $(DOCKER_IMAGE) $(CONTAINER_CMD) > /dev/null; \
-		$(ECHO) "$(CONTAINER_NAME)"; \
-	fi; \
+.docker-container-create:
+	@$(ECHO) "Creating container $(CONTAINER_NAME)"
+	@docker create $(CONTAINER_CREATE_OPTS) --name $(CONTAINER_NAME) $(DOCKER_IMAGE) $(CONTAINER_CMD) > /dev/null
+	@$(ECHO) $(DOCKER_IMAGE) > $@
 
+# Start container
 .PHONY: docker-container-start
-docker-container-start: docker-container-create
-	@set -eo pipefail; \
-	if [ -z "$$(docker container ls --quiet --filter 'name=^/$(CONTAINER_NAME)$$')" ]; then \
-		$(ECHO) -n "Starting container: "; \
-		docker start $(CONTAINER_START_OPTS) $(CONTAINER_NAME) > /dev/null; \
-		$(ECHO) "$(CONTAINER_NAME)"; \
-	fi; \
+docker-container-start: .docker-container-start
+	@true
 
+.docker-container-start: $(CREATE_TARGET)
+	@$(ECHO) "Starting container $(CONTAINER_NAME)"
+	@docker start $(CONTAINER_START_OPTS) $(CONTAINER_NAME) > /dev/null
+	@$(ECHO) $(CONTAINER_NAME) > $@
+
+# List running containers
 .PHONY: docker-container-ps
 docker-container-ps:
-	@set -eo pipefail; \
-	docker container ls $(CONTAINER_PS_OPTS) --all --filter 'name=^/$(CONTAINER_NAME)$$'
+	@docker container ls $(CONTAINER_PS_OPTS) --all --filter 'name=^/$(CONTAINER_NAME)$$'
 
+# Display container logs
 .PHONY: docker-container-logs
 docker-container-logs:
-	@set -eo pipefail; \
-	if [ -n "$$(docker container ls --quiet --filter 'name=^/$(CONTAINER_NAME)$$')" ]; then \
-		docker container logs $(CONTAINER_LOGS_OPTS) $(CONTAINER_NAME); \
-	fi
+ifneq ($(wildcard .docker-container-start),)
+	@docker container logs $(CONTAINER_LOGS_OPTS) $(CONTAINER_NAME)
+endif
 
+# Follow container logs
 .PHONY: docker-container-logs-tail
 docker-container-logs-tail:
-	-@set -eo pipefail; \
-	if [ -n "$$(docker container ls --quiet --filter 'name=^/$(CONTAINER_NAME)$$')" ]; then \
-		docker container logs --follow $(CONTAINER_LOGS_OPTS) $(CONTAINER_NAME); \
-	fi
+ifneq ($(wildcard .docker-container-start),)
+	@docker container logs --follow $(CONTAINER_LOGS_OPTS) $(CONTAINER_NAME)
+endif
 
 # Run tests
 .PHONY: docker-container-test
-docker-container-test: docker-container-start
-	@set -eo pipefail; \
-	rm -f $(TEST_ENV_FILE); \
-	$(foreach DOCKER_VAR,$(TEST_CONTAINER_VARS),echo "$(DOCKER_VAR)=$($(DOCKER_VAR))" >> $(TEST_ENV_FILE);) \
-	docker run $(TEST_OPTS) $(TEST_IMAGE) $(TEST_CONTAINER_CMD)
+docker-container-test: $(START_TARGET)
+	@rm -f $(TEST_ENV_FILE)
+	@$(foreach VAR,$(TEST_CONTAINER_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);)
+	@docker run $(TEST_OPTS) $(TEST_IMAGE) $(TEST_CONTAINER_CMD)
 
+# Stop container
 .PHONY: docker-container-stop
 docker-container-stop:
-	@set -eo pipefail; \
-	if [ -n "$$(docker container ls --quiet --filter 'name=^/$(CONTAINER_NAME)$$')" ]; then \
-		$(ECHO) -n "Stopping container: "; \
-		docker stop $(CONTAINER_STOP_OPTS) $(CONTAINER_NAME) > /dev/null; \
-		$(ECHO) "$(CONTAINER_NAME)"; \
-	fi; \
+ifneq ($(wildcard .docker-container-start),)
+	@$(ECHO) -n "Stopping container $(CONTAINER_NAME)"
+	@docker stop $(CONTAINER_STOP_OPTS) $(CONTAINER_NAME) > /dev/null
+endif
 
+# Destroy container
 .PHONY: docker-container-destroy
 docker-container-destroy: docker-container-stop
 	@set -eo pipefail; \
-	CONTAINER_NAMES="$$(docker container ls --all --quiet --filter 'name=^/$(DOCKER_EXECUTOR_ID)_')"; \
-	if [ -n "$${CONTAINER_NAMES}" ]; then \
-		$(ECHO) -n "Destroying container: "; \
+	 CONTAINER_NAMES="$$(docker container ls --all --quiet --filter 'name=^/$(DOCKER_EXECUTOR_ID)_')"; \
+	 if [ -n "$${CONTAINER_NAMES}" ]; then \
+		$(ECHO) -n "Destroying container "; \
 		for CONTAINER_NAME in $${CONTAINER_NAMES}; do \
 			docker container rm $(CONTAINER_RM_OPTS) $${CONTAINER_NAME} > /dev/null; \
 			$(ECHO) "$${CONTAINER_NAME}"; \
 		done; \
-	fi
+	 fi
+	@rm -f .docker-container-*
 
 ### COMPOSE_EXECUTOR_TARGETS ###################################################
 
 # Display containers configuraion
 .PHONY: display-compose-config-file
 display-compose-config-file:
-	@set -eo pipefail; \
-	$(COMPOSE_CMD) config $(COMPOSE_CONFIG_OPTS)
+	@$(COMPOSE_CMD) config $(COMPOSE_CONFIG_OPTS)
 
-# Start fresh containers
+# Create containers
+.PHONY: docker-compose-create
+docker-compose-create: .docker-compose-create
+	@true
+
+.docker-compose-create:
+	@cd $(PROJECT_DIR) && \
+	 $(COMPOSE_CMD) create $(COMPOSE_CREATE_OPTS) $(COMPOSE_SERVICE_NAME)
+	@$(ECHO) $(COMPOSE_SERVICE_NAME) > $@
+
+# Start containers
 .PHONY: docker-compose-start
-docker-compose-start:
-	@set -eo pipefail; \
-	$(ECHO) "$(COMPOSE_NAME)" > $(COMPOSE_NAME_FILE); \
-	cd $(PROJECT_DIR); \
-	$(COMPOSE_CMD) up $(COMPOSE_UP_OPTS) $(COMPOSE_SERVICE_NAME)
+docker-compose-start: .docker-compose-start
+	@true
+
+.docker-compose-start: $(CREATE_TARGET)
+	@$(COMPOSE_CMD) up $(COMPOSE_UP_OPTS) $(COMPOSE_SERVICE_NAME)
+	@$(ECHO) $(COMPOSE_SERVICE_NAME) > $@
 
 # List running containers
 .PHONY: docker-compose-ps
 docker-compose-ps:
-	@set -eo pipefail; \
-	$(COMPOSE_CMD) ps $(COMPOSE_PS_OPTS); \
+	@$(COMPOSE_CMD) ps $(COMPOSE_PS_OPTS)
 
 # Display containers logs
 .PHONY: docker-compose-logs
 docker-compose-logs:
-	@set -eo pipefail; \
-	if [ -e "$(COMPOSE_NAME_FILE)" ]; then \
-		$(COMPOSE_CMD) logs $(COMPOSE_LOGS_OPTS); \
-	fi
+ifneq ($(wildcard .docker-compose-start),)
+	@$(COMPOSE_CMD) logs $(COMPOSE_LOGS_OPTS)
+endif
 
-# Follow container logs
+# Follow containers logs
 .PHONY: docker-compose-logs-tail
 docker-compose-logs-tail:
-	-@set -eo pipefail; \
-	if [ -e "$(COMPOSE_NAME_FILE)" ]; then \
-		$(COMPOSE_CMD) logs --follow $(COMPOSE_LOGS_OPTS); \
-	fi
+ifneq ($(wildcard .docker-compose-start),)
+	@$(COMPOSE_CMD) logs --follow $(COMPOSE_LOGS_OPTS)
+endif
 
 # Run tests
 .PHONY: docker-compose-test
-docker-compose-test: docker-compose-start
-	@set -eo pipefail; \
-	$(ECHO) -n > $(TEST_ENV_FILE); \
-	$(foreach VAR,$(TEST_COMPOSE_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);) \
-	$(COMPOSE_CMD) create --no-build $(TEST_SERVICE_NAME); \
-	if [ -z "$(TEST_PROJECT_VOLUME)" ]; then \
-		docker cp $(PROJECT_DIR) $(TEST_CONTAINER_NAME)_1:$(dir $(PROJECT_DIR)); \
-	fi; \
-	$(COMPOSE_CMD) run --no-deps $(TEST_SERVICE_NAME) $(TEST_CMD); \
-	$(COMPOSE_CMD) rm --force --stop -v $(TEST_SERVICE_NAME)
+docker-compose-test: $(START_TARGET)
+	@rm -f $(TEST_ENV_FILE)
+	@$(foreach VAR,$(TEST_COMPOSE_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);)
+	@$(COMPOSE_CMD) create --no-build $(TEST_SERVICE_NAME)
+	@docker cp $(PROJECT_DIR) $(TEST_CONTAINER_NAME):$(dir $(PROJECT_DIR))
+	@$(COMPOSE_CMD) run --no-deps $(TEST_SERVICE_NAME) $(TEST_CMD)
+	@$(COMPOSE_CMD) rm --force --stop -v $(TEST_SERVICE_NAME)
 
 # Stop containers
 .PHONY: docker-compose-stop
 docker-compose-stop:
-	@set -eo pipefail; \
-	if [ -e "$(COMPOSE_NAME_FILE)" ]; then \
-		$(COMPOSE_CMD) stop $(COMPOSE_STOP_OPTS); \
-	fi
+ifneq ($(wildcard .docker-compose-start),)
+	@$(COMPOSE_CMD) stop $(COMPOSE_STOP_OPTS)
+endif
 
 # Destroy containers
 .PHONY: docker-compose-destroy
 docker-compose-destroy:
-	@set -eo pipefail; \
-	if [ -e "$(COMPOSE_NAME_FILE)" ]; then \
-		$(COMPOSE_CMD) down $(COMPOSE_RM_OPTS); \
-		rm -f "$(COMPOSE_NAME_FILE)"; \
-	fi
+ifneq ($(wildcard .docker-compose-create),)
+	@$(COMPOSE_CMD) down $(COMPOSE_RM_OPTS)
+endif
+	@rm -f .docker-compose-*
 
 ### STACK_EXECUTOR_TARGETS #####################################################
 
@@ -814,11 +814,25 @@ display-stack-config-file:
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
 
-# Start fresh stack
-.PHONY: docker-stack-start
-docker-stack-start:
+# Create stack
+.PHONY: docker-stack-create
+docker-stack-create: .docker-stack-create
+	@true
+
+.docker-stack-create:
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
+	@$(ECHO) $(STACK_SERVICE_NAME) > $@
+
+# Start stack
+.PHONY: docker-stack-start
+docker-stack-start: .docker-stack-start
+	@true
+
+.docker-stack-start: $(CREATE_TARGET)
+# TODO: Docker Swarm Stack executor
+	$(error Docker executor "stack" is not yet implemented)
+	@$(ECHO) $(STACK_SERVICE_NAME) > $@
 
 # List running services
 .PHONY: docker-stack-ps
@@ -826,13 +840,13 @@ docker-stack-ps:
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
 
-# Display stack service logs
+# Display service logs
 .PHONY: docker-stack-logs
 docker-stack-logs:
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
 
-# Follow stack service logs
+# Follow service logs
 .PHONY: docker-stack-logs-tail
 docker-stack-logs-tail:
 # TODO: Docker Swarm Stack executor
@@ -840,11 +854,10 @@ docker-stack-logs-tail:
 
 # Run tests
 .PHONY: docker-stack-test
-docker-stack-test: docker-stack-start
+docker-stack-test: $(START_TARGET)
+	@rm -f $(TEST_ENV_FILE)
+	@$(foreach VAR,$(TEST_COMPOSE_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);)
 # TODO: Docker Swarm Stack executor
-	@set -eo pipefail; \
-	rm -f $(TEST_ENV_FILE); \
-	$(foreach VAR,$(STACK_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);) \
 	$(error Docker executor "stack" is not yet implemented)
 
 # Stop stack
@@ -856,83 +869,69 @@ docker-stack-stop:
 # Destroy stack
 .PHONY: docker-stack-destroy
 docker-stack-destroy:
+ifneq ($(wildcard .docker-stack-create),)
 # TODO: Docker Swarm Stack executor
-#	$(error Docker executor "stack" is not yet implemented)
-	@true
+	$(error Docker executor "stack" is not yet implemented)
+endif
+	@rm -f .docker-stack-*
 
 ### DOCKER_REGISTRY_TARGETS ####################################################
 
 # Pull all images from Docker Registry
 .PHONY: docker-pull
 docker-pull: docker-pull-dependencies docker-pull-image docker-pull-testimage
+	@true
 
 # Pull project images dependencies from Docker registry
 .PHONY: docker-pull-dependencies
 docker-pull-dependencies:
-	@set -eo pipefail; \
-	$(foreach DOCKER_IMAGE,$(DOCKER_IMAGE_DEPENDENCIES),docker pull $(DOCKER_IMAGE);echo;)
+	@$(foreach DOCKER_IMAGE,$(DOCKER_IMAGE_DEPENDENCIES),docker pull $(DOCKER_IMAGE);echo;)
 
 # Pull project images from Docker registry
 .PHONY: docker-pull-image
 docker-pull-image:
-	@set -eo pipefail; \
-	$(foreach TAG,$(DOCKER_PULL_TAGS),docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
+	@$(foreach TAG,$(DOCKER_PULL_TAGS),docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
 
 # Pull test image from Docker registry
 .PHONY: docker-pull-testimage
 docker-pull-testimage:
-	@set -eo pipefail; \
-	docker pull $(TEST_IMAGE)
+	@docker pull $(TEST_IMAGE)
 
 # Posh project images to Docker registry
 .PHONY: docker-push
 docker-push:
-	@set -eo pipefail; \
-	$(foreach TAG,$(DOCKER_PUSH_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
+	@$(foreach TAG,$(DOCKER_PUSH_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
 
+### DOCKER_ALL_VERSIONS_TARGETS ################################################
 
-### DOCKER_VERSION_TARGETS #####################################################
-
-# Make $(DOCKER_TARGET) in sll $(DOCKER_VERSIONS)
-.PHONY: docker-all
-docker-all:
-	@set -eo pipefail; \
-	for DOCKER_VERSION in $(DOCKER_VERSIONS); do \
-		if [ "$${DOCKER_VERSION}" = "latest" ]; then \
-			cd $(abspath $(DOCKER_VARIANT_DIR)); \
-		else \
-			cd $(abspath $(DOCKER_VARIANT_DIR))/$${DOCKER_VERSION}; \
-		fi; \
-		$(ECHO); \
-		$(ECHO); \
-		$(ECHO) "===> $(DOCKER_IMAGE_NAME):$${DOCKER_VERSION}"; \
-		$(ECHO); \
-		$(ECHO); \
-		$(MAKE) $(DOCKER_TARGET); \
-	done
-
-# Create $(DOCKER_VERSION_ALL_TARGETS)-all targets
-# DOCKER_ALL_TARGET:
-# $1 - <TARGET>
-define DOCKER_VERSION_ALL_TARGET
+# Create $(DOCKER_ALL_VERSIONS_TARGETS)-all targets
+define DOCKER_ALL_VERSIONS_TARGET
 .PHONY: $(1)-all
-$(1)-all: ; @set -eo pipefail; $(MAKE) docker-all DOCKER_TARGET=$(1)
+$(1)-all:
+	@$(foreach DOCKER_VERSION,$(DOCKER_VERSIONS), \
+	 	cd $(abspath $(DOCKER_VARIANT_DIR))$(if $(filter $(DOCKER_VERSION),latest),,/$(DOCKER_VERSION)); \
+		$(ECHO); \
+		$(ECHO); \
+		$(ECHO) "===> $(DOCKER_IMAGE_NAME):$(DOCKER_VERSION)"; \
+		$(ECHO); \
+		$(ECHO); \
+		$(MAKE) $(1); \
+	 )
 endef
-$(foreach DOCKER_TARGET,$(DOCKER_VERSION_ALL_TARGETS),$(eval $(call DOCKER_VERSION_ALL_TARGET,$(DOCKER_TARGET))))
+$(foreach DOCKER_TARGET,$(DOCKER_ALL_VERSIONS_TARGETS),$(eval $(call DOCKER_ALL_VERSIONS_TARGET,$(DOCKER_TARGET))))
 
 ### CIRCLE_CI ##################################################################
 
 # Update Dockerspec tag in CircleCI configuration
 .PHONY: ci-update-config
 ci-update-config: docker-pull-testimage
-	@set -eo pipefail; \
-	TEST_IMAGE_DIGEST="$(shell docker image inspect $(TEST_IMAGE) --format '{{index .RepoDigests 0}}')"; \
-	sed -i~ -E -e "s|-[[:space:]]*image:[[:space:]]*$(TEST_IMAGE_NAME)(@sha256)?:.*|- image: $${TEST_IMAGE_DIGEST}|" $(CIRCLE_CONFIG_FILE); \
-	if diff $(CIRCLE_CONFIG_FILE)~ $(CIRCLE_CONFIG_FILE) > /dev/null; then \
+	@TEST_IMAGE_DIGEST="$$(docker image inspect $(TEST_IMAGE) --format '{{index .RepoDigests 0}}')"; \
+	 sed -i~ -E -e "s|-[[:space:]]*image:[[:space:]]*$(TEST_IMAGE_NAME)(@sha256)?:.*|- image: $${TEST_IMAGE_DIGEST}|" $(CIRCLECI_CONFIG_FILE); \
+	 if diff $(CIRCLECI_CONFIG_FILE)~ $(CIRCLECI_CONFIG_FILE) > /dev/null; then \
 		$(ECHO) "CircleCI configuration is up-to-date"; \
-	else \
-		$(ECHO) "Updating CircleCI Docker executor image to: $${TEST_IMAGE_DIGEST}"; \
-	fi; \
-	rm -f $(CIRCLE_CONFIG_FILE)~
+	 else \
+		$(ECHO) "Updating CircleCI Docker executor image to $${TEST_IMAGE_DIGEST}"; \
+	 fi
+	@rm -f $(CIRCLECI_CONFIG_FILE)~
 
 ################################################################################
