@@ -164,14 +164,8 @@ $(error Unknown Docker executor "$(DOCKER_EXECUTOR)")
 endif
 
 # Variables available in running container
-CONTAINER_VARS		+= $(BUILD_VARS) \
-			   DOCKER_ENTRYPOINT_INFO \
-			   DOCKER_ENTRYPOINT_DEBUG
+CONTAINER_VARS		+= $(BUILD_VARS)
 CONTAINER_CREATE_OPTS	+= $(foreach VAR,$(CONTAINER_VARS),--env "$(VAR)=$($(VAR))")
-
-# Output docker-entrypoint.sh info and debug messages on container start
-DOCKER_ENTRYPOINT_INFO	?= yes
-DOCKER_ENTRYPOINT_DEBUG	?= yes
 
 # Run commands as user
 ifdef CONTAINER_USER
