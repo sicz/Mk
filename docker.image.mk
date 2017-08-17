@@ -781,6 +781,7 @@ docker-compose-test: $(START_TARGET)
 	@rm -f $(TEST_ENV_FILE)
 	@$(foreach VAR,$(TEST_COMPOSE_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);)
 	@$(COMPOSE_CMD) create --no-build $(TEST_SERVICE_NAME)
+	@$(ECHO) "Copying secrets to container $(SIMPLE_CA_CONTAINER_NAME)"
 	@docker cp $(PROJECT_DIR) $(TEST_CONTAINER_NAME):$(dir $(PROJECT_DIR))
 	@$(COMPOSE_CMD) run --no-deps $(TEST_SERVICE_NAME) $(TEST_CMD)
 	@$(COMPOSE_CMD) rm --force --stop -v $(TEST_SERVICE_NAME)
