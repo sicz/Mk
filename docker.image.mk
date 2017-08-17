@@ -2,7 +2,7 @@
 
 # Replace Debian Almquist Shell which does not support set -o pipefail with Bash
 ifeq ($(realpath $(SHELL)),/bin/dash)
-SHELL   := /bin/bash
+SHELL   		:= /bin/bash
 endif
 
 # Exit immediately if a command exits with a non-zero status
@@ -783,6 +783,7 @@ docker-compose-test: $(START_TARGET)
 	@$(COMPOSE_CMD) create --no-build $(TEST_SERVICE_NAME)
 	@$(ECHO) "Copying project to container $(TEST_CONTAINER_NAME)"
 	@docker cp $(PROJECT_DIR) $(TEST_CONTAINER_NAME):$(dir $(PROJECT_DIR))
+	@$(ECHO) "Running container $(TEST_CONTAINER_NAME)"
 	@$(COMPOSE_CMD) run --no-deps $(TEST_SERVICE_NAME) $(TEST_CMD)
 	@$(COMPOSE_CMD) rm --force --stop -v $(TEST_SERVICE_NAME)
 
