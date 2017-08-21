@@ -204,6 +204,7 @@ COMPOSE_VARS		+= $(CONTAINER_VARS) \
 			   TEST_DIR \
 			   TEST_ENV_FILE \
 			   TEST_IMAGE \
+			   TEST_PROJECT_DIR \
 			   DOCKER_VARIANT_DIR
 
 # Docker Compose command
@@ -284,6 +285,11 @@ TEST_CONTAINER_OPTS	+= --interactive \
 
 # File containing environment variables for the tests
 TEST_ENV_FILE		?= $(CURDIR)/.docker-$(DOCKER_EXECUTOR)-test-env
+
+# Use project dir as host volume for debugging tests if Docker host is local
+ifeq ($(DOCKER_HOST),)
+TEST_PROJECT_DIR	?= $(PROJECT_DIR)
+endif
 
 # Test command
 TEST_CMD		?= rspec
@@ -781,10 +787,17 @@ docker-compose-test: $(START_TARGET)
 	@rm -f $(TEST_ENV_FILE)
 	@$(foreach VAR,$(TEST_COMPOSE_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);)
 	@$(COMPOSE_CMD) create --no-build $(TEST_SERVICE_NAME)
+# Copy project dir to test container if Docker host is remote
+ifeq ($(TEST_PROJECT_DIR),)
 	@$(ECHO) "Copying project to container $(TEST_CONTAINER_NAME)"
 	@docker cp $(PROJECT_DIR) $(TEST_CONTAINER_NAME):$(dir $(PROJECT_DIR))
+	@$(ECHO) "Starting container $(TEST_CONTAINER_NAME)"
+	@docker start --attach --interactive $(TEST_CONTAINER_NAME)
+# Use project dir as host volume for debugging tests if Docker host is local
+else
 	@$(ECHO) "Running container $(TEST_CONTAINER_NAME)"
-	@docker start --attach $(TEST_CONTAINER_NAME)
+	@$(COMPOSE_CMD) run --no-deps $(TEST_SERVICE_NAME) $(TEST_CMD)
+endif
 	@$(COMPOSE_CMD) rm --force --stop -v $(TEST_SERVICE_NAME)
 
 # Stop containers
