@@ -300,6 +300,11 @@ ifneq ($(RSPEC_FORMAT),)
 SPEC_OPTS		+= --format $(RSPEC_FORMAT)
 endif
 
+# Allow RSpec colorized output without allocated tty
+ifeq ($(TEST_PROJECT_DIR),)
+SPEC_OPTS		+= --tty
+endif
+
 # CircleCI configuration file
 CIRCLECI_CONFIG_FILE	?= $(PROJECT_DIR)/.circleci/config.yml
 
