@@ -324,7 +324,7 @@ DOCKER_IMAGE_DEPENDENCIES += $(BASE_IMAGE)
 
 DOCKER_VERSIONS		?= latest
 DOCKER_ALL_VERSIONS_TARGETS += docker-pull \
-			   docker-pull-images \
+			   docker-pull-image \
 			   docker-pull-dependencies \
 			   docker-pull-testimage \
 			   docker-push
