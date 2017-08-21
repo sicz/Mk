@@ -784,7 +784,7 @@ docker-compose-test: $(START_TARGET)
 	@$(ECHO) "Copying project to container $(TEST_CONTAINER_NAME)"
 	@docker cp $(PROJECT_DIR) $(TEST_CONTAINER_NAME):$(dir $(PROJECT_DIR))
 	@$(ECHO) "Running container $(TEST_CONTAINER_NAME)"
-	@$(COMPOSE_CMD) run --no-deps $(TEST_SERVICE_NAME) $(TEST_CMD)
+	@docker start --attach $(TEST_CONTAINER_NAME)
 	@$(COMPOSE_CMD) rm --force --stop -v $(TEST_SERVICE_NAME)
 
 # Stop containers
