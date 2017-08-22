@@ -91,7 +91,7 @@ endif
 
 # Docker image build variables
 BUILD_OPTS		+= $(foreach VAR,$(BUILD_VARS),--build-arg "$(VAR)=$($(VAR))")
-BUILD_VARS		+= BASE_IMAGE \
+override BUILD_VARS	+= BASE_IMAGE \
 			   BASE_IMAGE_NAME \
 			   BASE_IMAGE_TAG \
 			   BUILD_DATE \
@@ -164,7 +164,7 @@ $(error Unknown Docker executor "$(DOCKER_EXECUTOR)")
 endif
 
 # Variables available in running container
-CONTAINER_VARS		+= $(BUILD_VARS)
+override CONTAINER_VARS	+= $(BUILD_VARS)
 CONTAINER_CREATE_OPTS	+= $(foreach VAR,$(CONTAINER_VARS),--env "$(VAR)=$($(VAR))")
 
 # Run commands as user
@@ -194,7 +194,7 @@ COMPOSE_PROJECT_NAME	?= $(COMPOSE_NAME)
 COMPOSE_SERVICE_NAME	?= $(SERVICE_NAME)
 
 # Variables used in Docker Compose file
-COMPOSE_VARS		+= $(CONTAINER_VARS) \
+override COMPOSE_VARS	+= $(CONTAINER_VARS) \
 			   COMPOSE_PROJECT_NAME \
 			   COMPOSE_FILE \
 			   PROJECT_DIR \
@@ -238,7 +238,7 @@ STACK_NAME		?= $(DOCKER_EXECUTOR_ID)
 STACK_SERVICE_NAME	?= $(SERVICE_NAME)
 
 # Variables used in Docker Stack file
-STACK_VARS		+= $(COMPOSE_VARS) \
+override STACK_VARS	+= $(COMPOSE_VARS) \
 			   $(TEST_VARS) \
 			   PROJECT_DIR \
 			   BUILD_DIR \
@@ -261,9 +261,9 @@ TEST_IMAGE		?= $(TEST_IMAGE_NAME):$(TEST_IMAGE_TAG)
 TEST_SERVICE_NAME	?= test
 
 # Test conatainer variables
-TEST_VARS		+= CONTAINER_NAME \
+override TEST_VARS	+= CONTAINER_NAME \
 			   SPEC_OPTS
-TEST_CONTAINER_VARS	+= $(CONTAINER_VARS) \
+TEST_CONTAINER_VARS	?= $(CONTAINER_VARS) \
 			   $(TEST_VARS)
 TEST_COMPOSE_VARS	?= $(COMPOSE_VARS) \
 			   $(TEST_VARS) \
@@ -297,12 +297,12 @@ TEST_CMD		?= rspec
 # Rspec output format
 # RSPEC_FORMAT		?= documentation
 ifneq ($(RSPEC_FORMAT),)
-SPEC_OPTS		+= --format $(RSPEC_FORMAT)
+override SPEC_OPTS	+= --format $(RSPEC_FORMAT)
 endif
 
 # Allow RSpec colorized output without allocated tty
 ifeq ($(TEST_PROJECT_DIR),)
-SPEC_OPTS		+= --tty
+override SPEC_OPTS	+= --tty
 endif
 
 # CircleCI configuration file
