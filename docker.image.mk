@@ -1,6 +1,6 @@
 ### SHELL ######################################################################
 
-# Replace Debian Almquist Shell which does not support set -o pipefail with Bash
+# Replace Debian Almquist Shell with Bash
 ifeq ($(realpath $(SHELL)),/bin/dash)
 SHELL   		:= /bin/bash
 endif
