@@ -119,6 +119,7 @@ DOCKER_EXECUTOR		?= container
 # Hi-level targets to create and start containers
 CREATE_TARGET		?= create
 START_TARGET		?= start
+DESTROY_TARGET		?= destroy
 
 # Unique project id
 DOCKER_EXECUTOR_ID_FILE	?= .docker-executor-id
@@ -428,6 +429,7 @@ DOCKER_CONFIG_FILE:	$(DOCKER_CONFIG_FILE)
 
 CREATE_TARGET:		$(CREATE_TARGET)
 START_TARGET:		$(START_TARGET)
+DESTROY_TARGET:		$(DESTROY_TARGET)
 
 SERVICE_NAME:		$(SERVICE_NAME)
 endef
@@ -603,7 +605,7 @@ endif
 
 # Set Docker executor configuration
 .PHONY: set-executor-config
-set-executor-config: docker-destroy
+set-executor-config: $(DESTROY_TARGET)
 ifneq ($(DOCKER_CONFIGS),)
 ifeq ($(filter $(DOCKER_CONFIG),$(DOCKER_CONFIGS)),)
 	$(error Unsupported Docker executor configuration "$(DOCKER_CONFIG)")
@@ -622,6 +624,11 @@ docker-create: display-executor-config docker-$(DOCKER_EXECUTOR)-create
 # Start containers
 .PHONY: docker-start
 docker-start: display-executor-config docker-$(DOCKER_EXECUTOR)-start
+	@true
+
+# Wait to container start
+.PHONY: docker-wait
+docker-wait: display-executor-config docker-$(DOCKER_EXECUTOR)-wait
 	@true
 
 # List running containers
@@ -693,6 +700,12 @@ docker-container-start: .docker-container-start
 	@docker start $(CONTAINER_START_OPTS) $(CONTAINER_NAME) > /dev/null
 	@$(ECHO) $(CONTAINER_NAME) > $@
 
+# Wait to container start
+.PHONY: docker-container-wait
+docker-container-wait: $(START_TARGET)
+	@$(ECHO) "Waiting for container $(CONTAINER_NAME)"
+	@docker run $(TEST_CONTAINER_OPTS) $(TEST_IMAGE) true
+
 # List running containers
 .PHONY: docker-container-ps
 docker-container-ps:
@@ -701,31 +714,31 @@ docker-container-ps:
 # Display container logs
 .PHONY: docker-container-logs
 docker-container-logs:
-ifneq ($(wildcard .docker-container-start),)
-	@docker container logs $(CONTAINER_LOGS_OPTS) $(CONTAINER_NAME)
-endif
+	@if [ -e .docker-container-start ]; then \
+		docker container logs $(CONTAINER_LOGS_OPTS) $(CONTAINER_NAME); \
+	fi
 
 # Follow container logs
 .PHONY: docker-container-logs-tail
 docker-container-logs-tail:
-ifneq ($(wildcard .docker-container-start),)
-	@docker container logs --follow $(CONTAINER_LOGS_OPTS) $(CONTAINER_NAME)
-endif
+	@if [ -e .docker-container-start ]; then \
+		docker container logs --follow $(CONTAINER_LOGS_OPTS) $(CONTAINER_NAME); \
+	fi
 
 # Run tests
 .PHONY: docker-container-test
 docker-container-test: $(START_TARGET)
 	@rm -f $(TEST_ENV_FILE)
 	@$(foreach VAR,$(TEST_CONTAINER_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);)
-	@docker run $(TEST_OPTS) $(TEST_IMAGE) $(TEST_CONTAINER_CMD)
+	@docker run $(TEST_CONTAINER_OPTS) $(TEST_IMAGE) $(TEST_CONTAINER_CMD)
 
 # Stop container
 .PHONY: docker-container-stop
 docker-container-stop:
-ifneq ($(wildcard .docker-container-start),)
-	@$(ECHO) -n "Stopping container $(CONTAINER_NAME)"
-	@docker stop $(CONTAINER_STOP_OPTS) $(CONTAINER_NAME) > /dev/null
-endif
+	@if [ -e .docker-container-start ]; then \
+		$(ECHO) -n "Stopping container $(CONTAINER_NAME)"; \
+		docker stop $(CONTAINER_STOP_OPTS) $(CONTAINER_NAME) > /dev/null; \
+	fi
 
 # Destroy container
 .PHONY: docker-container-destroy
@@ -767,6 +780,12 @@ docker-compose-start: .docker-compose-start
 	@$(COMPOSE_CMD) up $(COMPOSE_UP_OPTS) $(COMPOSE_SERVICE_NAME)
 	@$(ECHO) $(COMPOSE_SERVICE_NAME) > $@
 
+# Wait to container start
+.PHONY: docker-compose-wait
+docker-compose-wait: $(START_TARGET)
+	@$(ECHO) "Waiting for container $(CONTAINER_NAME)"
+	@$(COMPOSE_CMD) run --no-deps --rm $(TEST_SERVICE_NAME) true
+
 # List running containers
 .PHONY: docker-compose-ps
 docker-compose-ps:
@@ -775,16 +794,16 @@ docker-compose-ps:
 # Display containers logs
 .PHONY: docker-compose-logs
 docker-compose-logs:
-ifneq ($(wildcard .docker-compose-start),)
-	@$(COMPOSE_CMD) logs $(COMPOSE_LOGS_OPTS)
-endif
+	@if [ -e .docker-compose-start ]; then \
+		$(COMPOSE_CMD) logs $(COMPOSE_LOGS_OPTS); \
+	fi
 
 # Follow containers logs
 .PHONY: docker-compose-logs-tail
 docker-compose-logs-tail:
-ifneq ($(wildcard .docker-compose-start),)
-	@$(COMPOSE_CMD) logs --follow $(COMPOSE_LOGS_OPTS)
-endif
+	@if [ -e .docker-compose-start ]; then \
+		$(COMPOSE_CMD) logs --follow $(COMPOSE_LOGS_OPTS); \
+	fi
 
 # Run tests
 .PHONY: docker-compose-test
@@ -847,6 +866,12 @@ docker-stack-start: .docker-stack-start
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
 	@$(ECHO) $(STACK_SERVICE_NAME) > $@
+
+# Wait to container start
+.PHONY: docker-stack-wait
+docker-stack-wait: $(START_TARGET)
+# TODO: Docker Swarm Stack executor
+	$(error Docker executor "stack" is not yet implemented)
 
 # List running services
 .PHONY: docker-stack-ps
