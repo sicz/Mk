@@ -119,7 +119,7 @@ DOCKER_EXECUTOR		?= container
 # Hi-level targets to create and start containers
 CREATE_TARGET		?= create
 START_TARGET		?= start
-DESTROY_TARGET		?= destroy
+RM_TARGET		?= rm
 
 # Unique project id
 DOCKER_EXECUTOR_ID_FILE	?= .docker-executor-id
@@ -433,7 +433,7 @@ DOCKER_CONFIG_FILE:	$(DOCKER_CONFIG_FILE)
 
 CREATE_TARGET:		$(CREATE_TARGET)
 START_TARGET:		$(START_TARGET)
-DESTROY_TARGET:		$(DESTROY_TARGET)
+RM_TARGET:		$(RM_TARGET)
 
 SERVICE_NAME:		$(SERVICE_NAME)
 endef
@@ -609,7 +609,7 @@ endif
 
 # Set Docker executor configuration
 .PHONY: set-executor-config
-set-executor-config: $(DESTROY_TARGET)
+set-executor-config: $(RM_TARGET)
 ifneq ($(DOCKER_CONFIGS),)
 ifeq ($(filter $(DOCKER_CONFIG),$(DOCKER_CONFIGS)),)
 	$(error Unsupported Docker executor configuration "$(DOCKER_CONFIG)")
@@ -619,6 +619,12 @@ endif
 else
 	$(error Docker executor does not support multiple configs)
 endif
+
+# Run fresh copy of containers
+.PHONY: docker-up
+docker-up:
+	@$(MAKE) $(RM_TARGET)
+	@$(MAKE) $(START_TARGET)
 
 # Create containers
 .PHONY: docker-create
@@ -632,7 +638,7 @@ docker-start: display-executor-config docker-$(DOCKER_EXECUTOR)-start
 
 # Wait to container start
 .PHONY: docker-wait
-docker-wait: display-executor-config docker-$(DOCKER_EXECUTOR)-wait
+docker-wait: docker-$(DOCKER_EXECUTOR)-wait
 	@true
 
 # List running containers
@@ -666,14 +672,14 @@ docker-test: display-executor-config docker-$(DOCKER_EXECUTOR)-test
 docker-stop: docker-$(DOCKER_EXECUTOR)-stop
 	@true
 
-# Destroy containers
-.PHONY: docker-destroy
-docker-destroy: docker-$(DOCKER_EXECUTOR)-destroy
+# Remove containers
+.PHONY: docker-rm
+docker-rm: docker-$(DOCKER_EXECUTOR)-rm
 	@true
 
-# Destroy all containers and remove working files
+# Remove all containers and remove working files
 .PHONY: docker-clean
-docker-clean: docker-stack-destroy docker-compose-destroy docker-container-destroy
+docker-clean: docker-stack-rm docker-compose-rm docker-container-rm
 	@rm -f .docker-*
 	@find . -type f -name '*~' | xargs rm -f
 
@@ -691,7 +697,7 @@ docker-container-create: .docker-container-create
 
 .docker-container-create:
 	@$(ECHO) "Creating container $(CONTAINER_NAME)"
-	@docker create $(CONTAINER_CREATE_OPTS) $(DOCKER_IMAGE) $(CONTAINER_CMD) > /dev/null
+	@docker container create $(CONTAINER_CREATE_OPTS) $(DOCKER_IMAGE) $(CONTAINER_CMD) > /dev/null
 	@$(ECHO) $(DOCKER_IMAGE) > $@
 
 # Start container
@@ -701,14 +707,14 @@ docker-container-start: .docker-container-start
 
 .docker-container-start: $(CREATE_TARGET)
 	@$(ECHO) "Starting container $(CONTAINER_NAME)"
-	@docker start $(CONTAINER_START_OPTS) $(CONTAINER_NAME) > /dev/null
+	@docker container start $(CONTAINER_START_OPTS) $(CONTAINER_NAME) > /dev/null
 	@$(ECHO) $(CONTAINER_NAME) > $@
 
 # Wait to container start
 .PHONY: docker-container-wait
 docker-container-wait: $(START_TARGET)
 	@$(ECHO) "Waiting for container $(CONTAINER_NAME)"
-	@docker run $(TEST_CONTAINER_OPTS) $(TEST_IMAGE) true
+	@docker container run $(TEST_CONTAINER_OPTS) $(TEST_IMAGE) true
 
 # List running containers
 .PHONY: docker-container-ps
@@ -733,23 +739,23 @@ docker-container-logs-tail:
 .PHONY: docker-container-test
 docker-container-test: $(START_TARGET)
 	@$(ECHO) "Running container $(CONTAINER_NAME)"
-	@docker run $(TEST_CONTAINER_OPTS) $(TEST_IMAGE) $(TEST_CMD)
+	@docker container run $(TEST_CONTAINER_OPTS) $(TEST_IMAGE) $(TEST_CMD)
 
 # Stop container
 .PHONY: docker-container-stop
 docker-container-stop:
 	@if [ -e .docker-container-start ]; then \
 		$(ECHO) -n "Stopping container $(CONTAINER_NAME)"; \
-		docker stop $(CONTAINER_STOP_OPTS) $(CONTAINER_NAME) > /dev/null; \
+		docker container stop $(CONTAINER_STOP_OPTS) $(CONTAINER_NAME) > /dev/null; \
 	fi
 
-# Destroy container
-.PHONY: docker-container-destroy
-docker-container-destroy: docker-container-stop
+# Remove container
+.PHONY: docker-container-rm
+docker-container-rm: docker-container-stop
 	@set -eo pipefail; \
 	 CONTAINER_NAMES="$$(docker container ls --all --quiet --filter 'name=^/$(DOCKER_EXECUTOR_ID)_')"; \
 	 if [ -n "$${CONTAINER_NAMES}" ]; then \
-		$(ECHO) -n "Destroying container "; \
+		$(ECHO) -n "Removing container "; \
 		for CONTAINER_NAME in $${CONTAINER_NAMES}; do \
 			docker container rm $(CONTAINER_RM_OPTS) $${CONTAINER_NAME} > /dev/null; \
 			$(ECHO) "$${CONTAINER_NAME}"; \
@@ -767,7 +773,6 @@ display-compose-config-file:
 # Create containers
 .PHONY: docker-compose-create
 docker-compose-create: .docker-compose-create
-	@true
 
 .docker-compose-create:
 	@cd $(PROJECT_DIR) && \
@@ -777,7 +782,6 @@ docker-compose-create: .docker-compose-create
 # Start containers
 .PHONY: docker-compose-start
 docker-compose-start: .docker-compose-start
-	@true
 
 .docker-compose-start: $(CREATE_TARGET)
 	@$(COMPOSE_CMD) up $(COMPOSE_UP_OPTS) $(COMPOSE_SERVICE_NAME)
@@ -828,16 +832,16 @@ endif
 # Stop containers
 .PHONY: docker-compose-stop
 docker-compose-stop:
-ifneq ($(wildcard .docker-compose-start),)
-	@$(COMPOSE_CMD) stop $(COMPOSE_STOP_OPTS)
-endif
+	@if [ -e .docker-compose-start ]; then \
+		$(COMPOSE_CMD) stop $(COMPOSE_STOP_OPTS); \
+	fi
 
-# Destroy containers
-.PHONY: docker-compose-destroy
-docker-compose-destroy:
-ifneq ($(wildcard .docker-compose-create),)
-	@$(COMPOSE_CMD) down $(COMPOSE_RM_OPTS)
-endif
+# Remove containers
+.PHONY: docker-compose-rm
+docker-compose-rm:
+	@if [ -e .docker-compose-create ]; then \
+		$(COMPOSE_CMD) down $(COMPOSE_RM_OPTS); \
+	fi
 	@rm -f .docker-compose-*
 
 ### STACK_EXECUTOR_TARGETS #####################################################
@@ -904,13 +908,13 @@ docker-stack-stop:
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
 
-# Destroy stack
-.PHONY: docker-stack-destroy
-docker-stack-destroy:
-ifneq ($(wildcard .docker-stack-create),)
+# Remove stack
+.PHONY: docker-stack-rm
+docker-stack-rm:
 # TODO: Docker Swarm Stack executor
-	$(error Docker executor "stack" is not yet implemented)
-endif
+#	@if [ -e .docker-stack-create ]; then \
+#		$(error Docker executor "stack" is not yet implemented); \
+#	fi
 	@rm -f .docker-stack-*
 
 ### DOCKER_REGISTRY_TARGETS ####################################################
