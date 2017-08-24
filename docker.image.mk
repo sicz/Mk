@@ -149,6 +149,9 @@ endif
 # Docker service name
 SERVICE_NAME		?= $(shell echo $(DOCKER_NAME) | sed -E -e "s/[^[:alnum:]_]+/_/g")
 
+# Wait service name
+WAIT_SERVICE_NAME	?= wait
+
 # Docker container name
 ifeq ($(DOCKER_EXECUTOR),container)
 CONTAINER_NAME		?= $(DOCKER_EXECUTOR_ID)_$(SERVICE_NAME)
@@ -166,7 +169,8 @@ endif
 
 # Variables available in running container
 override CONTAINER_VARS	+= $(BUILD_VARS)
-CONTAINER_CREATE_OPTS	+= $(foreach VAR,$(CONTAINER_VARS),--env "$(VAR)=$($(VAR))")
+CONTAINER_CREATE_OPTS	+= $(foreach VAR,$(CONTAINER_VARS),--env "$(VAR)=$($(VAR))") \
+			  --name = $(CONTAINER_NAME)
 
 # Run commands as user
 ifdef CONTAINER_USER
@@ -273,7 +277,7 @@ TEST_STACK_VARS		?= $(STACK_VARS) \
 			   $(TEST_VARS) \
 			   TEST_CMD
 
-# Classic Docer test container variables and options
+# Classic Docer test container options
 TEST_CONTAINER_OPTS	+= --interactive \
 			   --tty \
 			   --name $(TEST_CONTAINER_NAME) \
@@ -687,7 +691,7 @@ docker-container-create: .docker-container-create
 
 .docker-container-create:
 	@$(ECHO) "Creating container $(CONTAINER_NAME)"
-	@docker create $(CONTAINER_CREATE_OPTS) --name $(CONTAINER_NAME) $(DOCKER_IMAGE) $(CONTAINER_CMD) > /dev/null
+	@docker create $(CONTAINER_CREATE_OPTS) $(DOCKER_IMAGE) $(CONTAINER_CMD) > /dev/null
 	@$(ECHO) $(DOCKER_IMAGE) > $@
 
 # Start container
@@ -728,9 +732,8 @@ docker-container-logs-tail:
 # Run tests
 .PHONY: docker-container-test
 docker-container-test: $(START_TARGET)
-	@rm -f $(TEST_ENV_FILE)
-	@$(foreach VAR,$(TEST_CONTAINER_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);)
-	@docker run $(TEST_CONTAINER_OPTS) $(TEST_IMAGE) $(TEST_CONTAINER_CMD)
+	@$(ECHO) "Running container $(CONTAINER_NAME)"
+	@docker run $(TEST_CONTAINER_OPTS) $(TEST_IMAGE) $(TEST_CMD)
 
 # Stop container
 .PHONY: docker-container-stop
@@ -784,7 +787,7 @@ docker-compose-start: .docker-compose-start
 .PHONY: docker-compose-wait
 docker-compose-wait: $(START_TARGET)
 	@$(ECHO) "Waiting for container $(CONTAINER_NAME)"
-	@$(COMPOSE_CMD) run --no-deps --rm $(TEST_SERVICE_NAME) true
+	@$(COMPOSE_CMD) run --no-deps --rm $(WAIT_SERVICE_NAME) true
 
 # List running containers
 .PHONY: docker-compose-ps
@@ -804,8 +807,7 @@ docker-compose-logs-tail:
 	@if [ -e .docker-compose-start ]; then \
 		$(COMPOSE_CMD) logs --follow $(COMPOSE_LOGS_OPTS); \
 	fi
-
-# Run tests
+# Create test container
 .PHONY: docker-compose-test
 docker-compose-test: $(START_TARGET)
 	@rm -f $(TEST_ENV_FILE)
@@ -820,9 +822,8 @@ ifeq ($(TEST_PROJECT_DIR),)
 # Use project dir as host volume for debugging tests if Docker host is local
 else
 	@$(ECHO) "Running container $(TEST_CONTAINER_NAME)"
-	@$(COMPOSE_CMD) run --no-deps $(TEST_SERVICE_NAME) $(TEST_CMD)
+	@$(COMPOSE_CMD) run --rm $(TEST_SERVICE_NAME) $(TEST_CMD)
 endif
-	@$(COMPOSE_CMD) rm --force --stop -v $(TEST_SERVICE_NAME)
 
 # Stop containers
 .PHONY: docker-compose-stop
@@ -894,8 +895,6 @@ docker-stack-logs-tail:
 # Run tests
 .PHONY: docker-stack-test
 docker-stack-test: $(START_TARGET)
-	@rm -f $(TEST_ENV_FILE)
-	@$(foreach VAR,$(TEST_COMPOSE_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);)
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
 
