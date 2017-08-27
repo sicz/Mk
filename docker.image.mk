@@ -623,8 +623,7 @@ endif
 # Run fresh copy of containers
 .PHONY: docker-up
 docker-up:
-	@$(MAKE) $(RM_TARGET)
-	@$(MAKE) $(START_TARGET)
+	@$(MAKE) $(RM_TARGET) $(START_TARGET)
 
 # Create containers
 .PHONY: docker-create
