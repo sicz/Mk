@@ -637,7 +637,7 @@ docker-create: display-executor-config docker-$(DOCKER_EXECUTOR)-create
 docker-start: display-executor-config docker-$(DOCKER_EXECUTOR)-start
 	@true
 
-# Wait to start of the containers
+# Wait for the start of the containers
 .PHONY: docker-wait
 docker-wait: docker-$(DOCKER_EXECUTOR)-wait
 	@true
