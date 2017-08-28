@@ -5,8 +5,8 @@ ifeq ($(realpath $(SHELL)),/bin/dash)
 SHELL   		:= /bin/bash
 endif
 
-# Exit immediately if a command exits with a non-zero status
-# TODO: .SHELLFLAGS does not exists on obsoleted macOs X-Code make
+# Exit immediately if a command exits with a non-zero exit status
+# TODO: .SHELLFLAGS does not exists on obsoleted macOS X-Code make
 # .SHELLFLAGS		= -ec
 SHELL			+= -e
 
@@ -82,7 +82,7 @@ BUILD_DOCKER_FILE	?= $(abspath $(DOCKER_VARIANT_DIR)/$(DOCKER_FILE))
 BUILD_OPTS		+= --tag $(DOCKER_IMAGE) \
 			   $(foreach TAG,$(DOCKER_IMAGE_TAGS),--tag $(DOCKER_IMAGE_NAME):$(TAG))
 
-# Use http proxy when building image
+# Use http proxy when building the image
 ifdef HTTP_PROXY
 BUILD_OPTS		+= --build-arg HTTP_PROXY=$(http_proxy)
 else ifdef http_proxy
@@ -110,13 +110,13 @@ override BUILD_VARS	+= BASE_IMAGE \
 
 #### DOCKER_EXECUTOR ###########################################################
 
-# Auto detect Docker executor type:
+# Docker executor type:
 # container - classic Docker container
 # compose - Docker Compose service
 # stack - Docker Swarm stack
 DOCKER_EXECUTOR		?= container
 
-# Hi-level targets to create and start containers
+# Hi-level targets for creating and starting containers
 CREATE_TARGET		?= create
 START_TARGET		?= start
 RM_TARGET		?= rm
@@ -132,7 +132,7 @@ DOCKER_EXECUTOR_ID	:= $(shell \
 				fi \
 			   )
 
-# Support multiple executor configurations
+# Support multiple configurations of the Docker executor
 ifneq ($(DOCKER_CONFIGS),)
 DOCKER_CONFIG_FILE	?= .docker-executor-config
 DOCKER_CONFIG		?= $(shell \
@@ -167,12 +167,12 @@ else
 $(error Unknown Docker executor "$(DOCKER_EXECUTOR)")
 endif
 
-# Variables available in running container
+# Variables available in the running container
 override CONTAINER_VARS	+= $(BUILD_VARS)
 CONTAINER_CREATE_OPTS	+= $(foreach VAR,$(CONTAINER_VARS),--env "$(VAR)=$($(VAR))") \
 			  --name = $(CONTAINER_NAME)
 
-# Run commands as user
+# Run command as a user
 ifdef CONTAINER_USER
 CONTAINER_CREATE_OPTS	+= --user $(CONTAINER_USER)
 endif
@@ -198,7 +198,7 @@ COMPOSE_PROJECT_NAME	?= $(COMPOSE_NAME)
 # Docker Compose service name
 COMPOSE_SERVICE_NAME	?= $(SERVICE_NAME)
 
-# Variables used in Docker Compose file
+# Variables used in the Docker Compose file
 override COMPOSE_VARS	+= $(CONTAINER_VARS) \
 			   COMPOSE_PROJECT_NAME \
 			   COMPOSE_FILE \
@@ -223,7 +223,7 @@ COMPOSE_CREATE_OPTS	+= --no-build
 # Docker Compose up options
 COMPOSE_UP_OPTS		+= -d --remove-orphans $(COMPOSE_CREATE_OPTS)
 
-# Docker Compose down
+# Docker Compose down options
 COMPOSE_RM_OPTS		+= --remove-orphans -v
 
 ### STACK_EXECUTOR #############################################################
@@ -242,7 +242,7 @@ STACK_NAME		?= $(DOCKER_EXECUTOR_ID)
 # Docker Compose service name
 STACK_SERVICE_NAME	?= $(SERVICE_NAME)
 
-# Variables used in Docker Stack file
+# Variables used in the Docker Stack file
 override STACK_VARS	+= $(COMPOSE_VARS) \
 			   $(TEST_VARS) \
 			   PROJECT_DIR \
@@ -265,7 +265,7 @@ TEST_IMAGE		?= $(TEST_IMAGE_NAME):$(TEST_IMAGE_TAG)
 # Docker Compose/Swarm test service name
 TEST_SERVICE_NAME	?= test
 
-# Test conatainer variables
+# Variables used in the test conatainer
 override TEST_VARS	+= CONTAINER_NAME \
 			   SPEC_OPTS
 TEST_CONTAINER_VARS	?= $(CONTAINER_VARS) \
@@ -277,7 +277,7 @@ TEST_STACK_VARS		?= $(STACK_VARS) \
 			   $(TEST_VARS) \
 			   TEST_CMD
 
-# Classic Docer test container options
+# Classic Docker test container options
 TEST_CONTAINER_OPTS	+= --interactive \
 			   --tty \
 			   --name $(TEST_CONTAINER_NAME) \
@@ -288,10 +288,10 @@ TEST_CONTAINER_OPTS	+= --interactive \
 			   --workdir /root/$(TEST_DIR) \
 			   --rm
 
-# File containing environment variables for the tests
+# File containing environment variables
 TEST_ENV_FILE		?= $(CURDIR)/.docker-$(DOCKER_EXECUTOR)-test-env
 
-# Use project dir as host volume for debugging tests if Docker host is local
+# Use the project dir as the host volume if Docker host is local
 ifeq ($(DOCKER_HOST),)
 TEST_PROJECT_DIR	?= $(PROJECT_DIR)
 endif
@@ -319,7 +319,7 @@ CIRCLECI_CONFIG_FILE	?= $(PROJECT_DIR)/.circleci/config.yml
 SHELL_OPTS		+= --interactive --tty
 SHELL_CMD		?= /docker-entrypoint.sh /bin/bash
 
-# Run shell as user
+# Run the shell as an user
 ifdef CONTAINER_USER
 SHELL_OPTS		+= --user $(CONTAINER_USER)
 endif
@@ -338,6 +338,7 @@ DOCKER_IMAGE_DEPENDENCIES += $(BASE_IMAGE)
 
 ### DOCKER_VERSION #############################################################
 
+# Make targets propagated to all Docker image versions
 DOCKER_VERSIONS		?= latest
 DOCKER_ALL_VERSIONS_TARGETS += docker-pull \
 			   docker-pull-image \
@@ -347,7 +348,7 @@ DOCKER_ALL_VERSIONS_TARGETS += docker-pull \
 
 ################################################################################
 
-# Echo wit -n support
+# Echo with -n support
 ECHO			= /bin/echo
 
 ################################################################################
@@ -371,6 +372,7 @@ endif
 
 ################################################################################
 
+# Display the make variables
 MAKE_VARS		?= GITHUB_MAKE_VARS \
 			   BASE_IMAGE_MAKE_VARS \
 			   DOCKER_IMAGE_MAKE_VARS \
@@ -553,7 +555,7 @@ export DOCKER_VERSION_MAKE_VARS
 
 ### BUILD_TARGETS ##############################################################
 
-# Build Docker image with cached layers
+# Build a new image with using the Docker layer caching
 .PHONY: docker-build
 docker-build:
 	@$(ECHO) "Build date $(BUILD_DATE)"
@@ -561,7 +563,7 @@ docker-build:
 	@$(ECHO) "Building image $(DOCKER_IMAGE)"
 	@docker build $(BUILD_OPTS) -f $(BUILD_DOCKER_FILE) $(BUILD_DIR)
 
-# Build Docker image without cached layers
+# Build a new image without using the Docker layer caching
 .PHONY: docker-rebuild
 docker-rebuild:
 	@$(ECHO) "Build date $(BUILD_DATE)"
@@ -569,7 +571,7 @@ docker-rebuild:
 	@$(ECHO) "Rebilding image $(DOCKER_IMAGE)"
 	@docker build $(BUILD_OPTS) -f $(BUILD_DOCKER_FILE) --no-cache $(BUILD_DIR)
 
-# Tag Docker image
+# Tag the Docker image
 .PHONY: docker-tag
 docker-tag:
 ifneq ($(DOCKER_IMAGE_TAGS),)
@@ -581,12 +583,19 @@ endif
 
 ### EXECUTOR_TARGETS ###########################################################
 
-# Display containers configuration file
+# Display the name of the current configuration
+.PHONY: display-executor-config
+display-executor-config:
+ifneq ($(DOCKER_CONFIGS),)
+	@$(ECHO) "Using $(DOCKER_CONFIG) configuration with $(DOCKER_EXECUTOR) executor"
+endif
+
+# Display the configuration file
 .PHONY: diplay-config-file
 display-config-file: display-$(DOCKER_EXECUTOR)-config-file
 	@true
 
-# Display make variables
+# Display the make variables
 .PHONY: display-makevars
 display-makevars: display-executor-config
 	@set -eo pipefail; \
@@ -600,14 +609,7 @@ display-makevars: display-executor-config
 		-e $$'s/ +([A-Z][A-Z]+)/\\\n\\\t\\\t\\\t\\1/g' \
 		-e $$'s/(;) */\\1\\\n\\\t\\\t\\\t/g'
 
-# Display current executor configuration
-.PHONY: display-executor-config
-display-executor-config:
-ifneq ($(DOCKER_CONFIGS),)
-	@$(ECHO) "Using $(DOCKER_CONFIG) configuration with $(DOCKER_EXECUTOR) executor"
-endif
-
-# Set Docker executor configuration
+# Set the Docker executor configuration
 .PHONY: set-executor-config
 set-executor-config: $(RM_TARGET)
 ifneq ($(DOCKER_CONFIGS),)
@@ -620,63 +622,63 @@ else
 	$(error Docker executor does not support multiple configs)
 endif
 
-# Run fresh copy of containers
+# Remove the containers and then run them fresh
 .PHONY: docker-up
 docker-up:
 	@$(MAKE) $(RM_TARGET) $(START_TARGET)
 
-# Create containers
+# Create the containers
 .PHONY: docker-create
 docker-create: display-executor-config docker-$(DOCKER_EXECUTOR)-create
 	@true
 
-# Start containers
+# Start the containers
 .PHONY: docker-start
 docker-start: display-executor-config docker-$(DOCKER_EXECUTOR)-start
 	@true
 
-# Wait to container start
+# Wait to start of the containers
 .PHONY: docker-wait
 docker-wait: docker-$(DOCKER_EXECUTOR)-wait
 	@true
 
-# List running containers
+# Display running containers
 .PHONY: docker-ps
 docker-ps: docker-$(DOCKER_EXECUTOR)-ps
 	@true
 
-# Display containers logs
+# Display the containers logs
 .PHONY: docker-logs
 docker-logs: docker-$(DOCKER_EXECUTOR)-logs
 	@true
 
-# Follow containers logs
+# Follow the containers logs
 .PHONY: docker-logs-tail
 docker-logs-tail: docker-$(DOCKER_EXECUTOR)-logs-tail
 	@true
 
-# Run shell in the container
+# Run the shell in the running container
 .PHONY: docker-shell
 docker-shell: $(START_TARGET)
 	@set -eo pipefail; \
 	docker exec $(SHELL_OPTS) $(CONTAINER_NAME) $(SHELL_CMD)
 
-# Run tests
+# Run the tests
 .PHONY: docker-test
 docker-test: display-executor-config docker-$(DOCKER_EXECUTOR)-test
 	@true
 
-# Stop containers
+# Stop the containers
 .PHONY: docker-stop
 docker-stop: docker-$(DOCKER_EXECUTOR)-stop
 	@true
 
-# Remove containers
+# Remove the containers
 .PHONY: docker-rm
 docker-rm: docker-$(DOCKER_EXECUTOR)-rm
 	@true
 
-# Remove all containers and remove working files
+# Remove all containers and work files
 .PHONY: docker-clean
 docker-clean: docker-stack-rm docker-compose-rm docker-container-rm
 	@rm -f .docker-*
@@ -684,12 +686,12 @@ docker-clean: docker-stack-rm docker-compose-rm docker-container-rm
 
 ### CONTAINER_EXECUTOR_TARGET ##################################################
 
-# Display container configuration
+# Display the configuration file
 .PHONY: display-container-config-file
 display-container-config-file:
 	@$(MAKE) display-makevars MAKE_VARS="$(DOCKER_EXECUTOR_MAKE_VARS)"
 
-# Create container
+# Create the container
 .PHONY: docker-container-create
 docker-container-create: .docker-container-create
 	@true
@@ -699,7 +701,7 @@ docker-container-create: .docker-container-create
 	@docker container create $(CONTAINER_CREATE_OPTS) $(DOCKER_IMAGE) $(CONTAINER_CMD) > /dev/null
 	@$(ECHO) $(DOCKER_IMAGE) > $@
 
-# Start container
+# Start the container
 .PHONY: docker-container-start
 docker-container-start: .docker-container-start
 	@true
@@ -709,38 +711,38 @@ docker-container-start: .docker-container-start
 	@docker container start $(CONTAINER_START_OPTS) $(CONTAINER_NAME) > /dev/null
 	@$(ECHO) $(CONTAINER_NAME) > $@
 
-# Wait to container start
+# Wait for the start of the container
 .PHONY: docker-container-wait
 docker-container-wait: $(START_TARGET)
 	@$(ECHO) "Waiting for container $(CONTAINER_NAME)"
 	@docker container run $(TEST_CONTAINER_OPTS) $(TEST_IMAGE) true
 
-# List running containers
+# Display running containers
 .PHONY: docker-container-ps
 docker-container-ps:
 	@docker container ls $(CONTAINER_PS_OPTS) --all --filter 'name=^/$(CONTAINER_NAME)$$'
 
-# Display container logs
+# Display the container logs
 .PHONY: docker-container-logs
 docker-container-logs:
 	@if [ -e .docker-container-start ]; then \
 		docker container logs $(CONTAINER_LOGS_OPTS) $(CONTAINER_NAME); \
 	fi
 
-# Follow container logs
+# Follow the container logs
 .PHONY: docker-container-logs-tail
 docker-container-logs-tail:
 	@if [ -e .docker-container-start ]; then \
 		docker container logs --follow $(CONTAINER_LOGS_OPTS) $(CONTAINER_NAME); \
 	fi
 
-# Run tests
+# Run the tests
 .PHONY: docker-container-test
 docker-container-test: $(START_TARGET)
 	@$(ECHO) "Running container $(CONTAINER_NAME)"
 	@docker container run $(TEST_CONTAINER_OPTS) $(TEST_IMAGE) $(TEST_CMD)
 
-# Stop container
+# Stop the container
 .PHONY: docker-container-stop
 docker-container-stop:
 	@if [ -e .docker-container-start ]; then \
@@ -748,7 +750,7 @@ docker-container-stop:
 		docker container stop $(CONTAINER_STOP_OPTS) $(CONTAINER_NAME) > /dev/null; \
 	fi
 
-# Remove container
+# Remove the container
 .PHONY: docker-container-rm
 docker-container-rm: docker-container-stop
 	@set -eo pipefail; \
@@ -764,12 +766,12 @@ docker-container-rm: docker-container-stop
 
 ### COMPOSE_EXECUTOR_TARGETS ###################################################
 
-# Display containers configuraion
+# Display the configuration file
 .PHONY: display-compose-config-file
 display-compose-config-file:
 	@$(COMPOSE_CMD) config $(COMPOSE_CONFIG_OPTS)
 
-# Create containers
+# Create the containers
 .PHONY: docker-compose-create
 docker-compose-create: .docker-compose-create
 
@@ -778,7 +780,7 @@ docker-compose-create: .docker-compose-create
 	 $(COMPOSE_CMD) create $(COMPOSE_CREATE_OPTS) $(COMPOSE_SERVICE_NAME)
 	@$(ECHO) $(COMPOSE_SERVICE_NAME) > $@
 
-# Start containers
+# Start the containers
 .PHONY: docker-compose-start
 docker-compose-start: .docker-compose-start
 
@@ -786,56 +788,57 @@ docker-compose-start: .docker-compose-start
 	@$(COMPOSE_CMD) up $(COMPOSE_UP_OPTS) $(COMPOSE_SERVICE_NAME)
 	@$(ECHO) $(COMPOSE_SERVICE_NAME) > $@
 
-# Wait to container start
+# Wait for the start of the containers
 .PHONY: docker-compose-wait
 docker-compose-wait: $(START_TARGET)
 	@$(ECHO) "Waiting for container $(CONTAINER_NAME)"
 	@$(COMPOSE_CMD) run --no-deps --rm $(WAIT_SERVICE_NAME) true
 
-# List running containers
+# Display running containers
 .PHONY: docker-compose-ps
 docker-compose-ps:
 	@$(COMPOSE_CMD) ps $(COMPOSE_PS_OPTS)
 
-# Display containers logs
+# Display the containers logs
 .PHONY: docker-compose-logs
 docker-compose-logs:
 	@if [ -e .docker-compose-start ]; then \
 		$(COMPOSE_CMD) logs $(COMPOSE_LOGS_OPTS); \
 	fi
 
-# Follow containers logs
+# Follow the containers logs
 .PHONY: docker-compose-logs-tail
 docker-compose-logs-tail:
 	@if [ -e .docker-compose-start ]; then \
 		$(COMPOSE_CMD) logs --follow $(COMPOSE_LOGS_OPTS); \
 	fi
-# Create test container
+
+# Run the tests
 .PHONY: docker-compose-test
 docker-compose-test: $(START_TARGET)
 	@rm -f $(TEST_ENV_FILE)
 	@$(foreach VAR,$(TEST_COMPOSE_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);)
 	@$(COMPOSE_CMD) create --no-build $(TEST_SERVICE_NAME)
-# Copy project dir to test container if Docker host is remote
+# Copy the project dir to the test container if the Docker host is remote
 ifeq ($(TEST_PROJECT_DIR),)
 	@$(ECHO) "Copying project to container $(TEST_CONTAINER_NAME)"
 	@docker cp $(PROJECT_DIR) $(TEST_CONTAINER_NAME):$(dir $(PROJECT_DIR))
 	@$(ECHO) "Starting container $(TEST_CONTAINER_NAME)"
 	@docker start --attach --interactive $(TEST_CONTAINER_NAME)
-# Use project dir as host volume for debugging tests if Docker host is local
+# Use the project dir as the host volume if Docker host is local
 else
 	@$(ECHO) "Running container $(TEST_CONTAINER_NAME)"
 	@$(COMPOSE_CMD) run --rm $(TEST_SERVICE_NAME) $(TEST_CMD)
 endif
 
-# Stop containers
+# Stop the containers
 .PHONY: docker-compose-stop
 docker-compose-stop:
 	@if [ -e .docker-compose-start ]; then \
 		$(COMPOSE_CMD) stop $(COMPOSE_STOP_OPTS); \
 	fi
 
-# Remove containers
+# Remove the containers
 .PHONY: docker-compose-rm
 docker-compose-rm:
 	@if [ -e .docker-compose-create ]; then \
@@ -845,13 +848,13 @@ docker-compose-rm:
 
 ### STACK_EXECUTOR_TARGETS #####################################################
 
-# Display stack configuraion
+# Display the configuration file
 .PHONY: display-stack-config-file
 display-stack-config-file:
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
 
-# Create stack
+# Create the stack
 .PHONY: docker-stack-create
 docker-stack-create: .docker-stack-create
 	@true
@@ -861,7 +864,7 @@ docker-stack-create: .docker-stack-create
 	$(error Docker executor "stack" is not yet implemented)
 	@$(ECHO) $(STACK_SERVICE_NAME) > $@
 
-# Start stack
+# Start the stack
 .PHONY: docker-stack-start
 docker-stack-start: .docker-stack-start
 	@true
@@ -871,43 +874,43 @@ docker-stack-start: .docker-stack-start
 	$(error Docker executor "stack" is not yet implemented)
 	@$(ECHO) $(STACK_SERVICE_NAME) > $@
 
-# Wait to container start
+# Wait for the start of the stack
 .PHONY: docker-stack-wait
 docker-stack-wait: $(START_TARGET)
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
 
-# List running services
+# Display running services
 .PHONY: docker-stack-ps
 docker-stack-ps:
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
 
-# Display service logs
+# Display the service logs
 .PHONY: docker-stack-logs
 docker-stack-logs:
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
 
-# Follow service logs
+# Follow the service logs
 .PHONY: docker-stack-logs-tail
 docker-stack-logs-tail:
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
 
-# Run tests
+# Run the tests
 .PHONY: docker-stack-test
 docker-stack-test: $(START_TARGET)
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
 
-# Stop stack
+# Stop the stack
 .PHONY: docker-stack-stop
 docker-stack-stop:
 # TODO: Docker Swarm Stack executor
 	$(error Docker executor "stack" is not yet implemented)
 
-# Remove stack
+# Remove the stack
 .PHONY: docker-stack-rm
 docker-stack-rm:
 # TODO: Docker Swarm Stack executor
@@ -918,27 +921,27 @@ docker-stack-rm:
 
 ### DOCKER_REGISTRY_TARGETS ####################################################
 
-# Pull all images from Docker Registry
+# Pull all images from the Docker Registry
 .PHONY: docker-pull
 docker-pull: docker-pull-dependencies docker-pull-image docker-pull-testimage
 	@true
 
-# Pull project images dependencies from Docker registry
+# Pull the project image dependencies from the Docker registry
 .PHONY: docker-pull-dependencies
 docker-pull-dependencies:
 	@$(foreach DOCKER_IMAGE,$(DOCKER_IMAGE_DEPENDENCIES),docker pull $(DOCKER_IMAGE);echo;)
 
-# Pull project images from Docker registry
+# Pull the project image from the Docker registry
 .PHONY: docker-pull-image
 docker-pull-image:
 	@$(foreach TAG,$(DOCKER_PULL_TAGS),docker pull $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
 
-# Pull test image from Docker registry
+# Pull the test image from the Docker registry
 .PHONY: docker-pull-testimage
 docker-pull-testimage:
 	@docker pull $(TEST_IMAGE)
 
-# Posh project images to Docker registry
+# Posh the project image to the Docker registry
 .PHONY: docker-push
 docker-push:
 	@$(foreach TAG,$(DOCKER_PUSH_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
@@ -963,7 +966,7 @@ $(foreach DOCKER_TARGET,$(DOCKER_ALL_VERSIONS_TARGETS),$(eval $(call DOCKER_ALL_
 
 ### CIRCLE_CI ##################################################################
 
-# Update Dockerspec tag in CircleCI configuration
+# Update the Dockerspec tag in the CircleCI configuration
 .PHONY: ci-update-config
 ci-update-config: docker-pull-testimage
 	@TEST_IMAGE_DIGEST="$$(docker image inspect $(TEST_IMAGE) --format '{{index .RepoDigests 0}}')"; \
