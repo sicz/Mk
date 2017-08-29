@@ -45,7 +45,6 @@ jobs:
           working_directory: ../docker-sample-project
           command: |
             ln -s ../Mk/.git .git
-            make display-executor-config
             make config-file
             make vars
             make docker-pull-dependencies docker-pull-testimage
