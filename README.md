@@ -1,9 +1,11 @@
-# A build tool for Docker containers
+# A build tool for the Docker images
+
+[![CircleCI](https://circleci.com/gh/sicz/Mk.svg?style=svg&circle-token=d1b3c54fc08a17aca43ca02ad8ab8ecff230b417)](https://circleci.com/gh/sicz/Mk)
 
 **This project is not aimed at public consumption.
 It exists to support the development of SICZ containers.**
 
-Makefiles that support the development of Docker containers.
+Makefiles that support the development of the Docker images.
 
 ## Getting started
 
@@ -23,14 +25,12 @@ git clone https://github.com/sicz/Mk
 
 ### Usage
 
-Create new Docker container directory populated from `docker-sample-project`
-directory:
+Create a new Docker image directory:
 ```bash
 make create NAME=my-docker-image
 ```
 
-Read carefully and adjust all files in your new Docker container directory.
-Interesting parts are enclosed in `[*TEXT*]` brackets.
+Read carefully and adjust all files in your new Docker image directory.
 
 ## Authors
 
@@ -43,9 +43,3 @@ who participated in this project.
 
 This project is licensed under the Apache License, Version 2.0 - see the
 [LICENSE](LICENSE) file for details.
-
-<!---
-## Acknowledgments
-
-[*Hat tip to anyone who's code or inspiration was used*]
---->
