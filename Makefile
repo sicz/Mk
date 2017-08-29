@@ -39,4 +39,18 @@ create:
 	@mkdir -p ../$(NAME)
 	cp -afv docker-sample-project/. ../$(NAME)
 
+### CIRCLE_CI ##################################################################
+
+PROJECT_DIR		?= $(CURDIR)
+BUILD_DIR		?= $(PROJECT_DIR)/docker-sample-project
+
+# Update the Dockerspec tag in the CircleCI configuration
+.PHONY: ci-update-config
+ci-update-config: Mk
+	cd $(BUILD_DIR); $(MAKE) $@ PROJECT_DIR=$(PROJECT_DIR)
+	rm -f Mk
+
+Mk:
+	ln -s . Mk
+
 ################################################################################

@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build: &build
+  build:
     docker:
       - image: sicz/dockerspec:latest
     environment:
