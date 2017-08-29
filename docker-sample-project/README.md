@@ -1,5 +1,4 @@
 # [*Project Title*]
-
 **This Docker image is not aimed at public consumption.
 It exists to serve as a single endpoint for SICZ projects.**
 
@@ -25,7 +24,7 @@ on how to deploy the project on a live system.
 
 [*A step by step series of examples that tell you have to get a development env running*]
 
-Clone GitHub repository to your working directory:
+Clone the GitHub repository into your working directory:
 ```bash
 git clone https://github.com/[*AUTHOR*]/[*REPOSITORY*]
 ```
@@ -34,22 +33,35 @@ git clone https://github.com/[*AUTHOR*]/[*REPOSITORY*]
 
 [*A step by step series of examples that tell you how to build and run Docker container*]
 
-Use command `make` to simplify Docker container development tasks:
+Use the command `make` to simplify the Docker container development tasks:
 ```bash
-make all        # Destroy running container, build new image and run tests
-make build      # Build new image
-make rebuild    # Build new image without caching
-make run        # Run container
-make stop       # Stop running container
-make start      # Start stopped container
-make restart    # Restart container
-make status     # Show container status
-make logs       # Show container logs
-make logs-tail  # Connect to container logs
-make shell      # Open shell in running container
-make test       # Run tests
-make rm         # Destroy running container
-make clean      # Destroy running container and clean
+make all                # Build a new image and run the tests
+make ci                 # Build a new image and run the tests
+make build              # Build a new image
+make rebuild            # Build a new image without using the Docker layer caching
+make config-file        # Display the configuration file for the current configuration
+make vars               # Display the make variables for the current configuration
+make up                 # Remove the containers and then run them fresh
+make create             # Create the containers
+make start              # Start the containers
+make stop               # Stop the containers
+make restart            # Restart the containers
+make rm                 # Remove the containers
+make wait               # Wait for the start of the containers
+make ps                 # Display running containers
+make logs               # Display the container logs
+make logs-tail          # Follow the container logs
+make shell              # Run the shell in the container
+make test               # Run the tests
+make test-all           # Run tests for all configurations
+make test-shell         # Run the shell in the test container
+make secrets            # Create the Simple CA secrets
+make clean              # Remove all containers and work files
+make docker-pull        # Pull all images from the Docker Registry
+make docker-pull-dependencies # Pull the project image dependencies from the Docker Registry
+make docker-pull-image  # Pull the project image from the Docker Registry
+make docker-pull-testimage # Pull the test image from the Docker Registry
+make docker-push        # Push the project image into the Docker Registry
 ```
 
 ## Deployment
@@ -61,13 +73,9 @@ You can start with this sample `docker-compose.yml` file:
 services:
   [*PROJECT*]:
     image: [*IMAGE_NAME*]
-    deploy:
-    networks:
-    ports:
-    secrets:
-    ulimits:
-    volumes:
     environment:
+    ports:
+    volumes:
 ```
 
 ## Authors
@@ -85,4 +93,4 @@ This project is licensed under the Apache License, Version 2.0 - see the
 
 ## Acknowledgments
 
-[*Hat tip to anyone who's code or inspiration was used*]
+[*A hat tip to anyone who's code or inspiration was used*]

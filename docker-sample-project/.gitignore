@@ -4,4 +4,7 @@
 *~
 
 # Info about running containers
-.container_*
+.docker-*
+
+# Simple CA secrets
+secrets

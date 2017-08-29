@@ -4,4 +4,7 @@
 .git
 
 # Tests
-**/spec
+spec
+
+# Simple CA secrets
+secrets

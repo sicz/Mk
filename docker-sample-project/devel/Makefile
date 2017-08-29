@@ -1,12 +1,29 @@
-################################################################################
+### BASE_IMAGE #################################################################
 
-BASEIMAGE_TAG		= [*Docker base image tag*]
-DOCKER_TAG		= [*Docker image tag*]
-DOCKER_TAGS		= devel
+# BASE_IMAGE_TAG	?= edge
 
-################################################################################
+### DOCKER_IMAGE ###############################################################
 
-DOCKER_HOME_DIR		= ..
-include $(DOCKER_HOME_DIR)/Makefile
+DOCKER_IMAGE_TAGS	?=
+
+### BUILD ######################################################################
+
+# SAMPLE_PROJECT_VERSION	?= 0.0.1
+
+# If the image configuration variables are not defined, the development image is
+# assumed to be the same as the latest image
+BUILD_CONFIG		?= $(BASE_IMAGE_TAG) \
+			   $(SAMPLE_PROJECT_VERSION)
+
+ifeq ($(strip $(BUILD_CONFIG)),)
+DOCKER_CI_TARGET	?= docker-tag
+DOCKER_BUILD_TARGET	?= docker-tag
+DOCKER_REBUILD_TARGET	?= docker-tag
+endif
+
+### MK_DOCKER_IMAGE ############################################################
+
+PROJECT_DIR		?= $(abspath ..)
+include $(PROJECT_DIR)/Makefile
 
 ################################################################################
