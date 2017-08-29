@@ -123,7 +123,7 @@ RM_TARGET		?= rm
 
 # Unique project id
 DOCKER_EXECUTOR_ID_FILE	?= .docker-executor-id
-DOCKER_EXECUTOR_ID	:= $(shell \
+DOCKER_EXECUTOR_ID	?= $(shell \
 				if [ -e $(DOCKER_EXECUTOR_ID_FILE) ]; then \
 					cat $(DOCKER_EXECUTOR_ID_FILE); \
 				else \
@@ -583,6 +583,10 @@ endif
 
 ### EXECUTOR_TARGETS ###########################################################
 
+# Save the Docker executor id
+$(DOCKER_EXECUTOR_ID_FILE):
+	@$(ECHO) $(DOCKER_EXECUTOR_ID) > $(DOCKER_EXECUTOR_ID_FILE)
+
 # Display the name of the current configuration
 .PHONY: display-executor-config
 display-executor-config:
@@ -625,11 +629,11 @@ endif
 # Remove the containers and then run them fresh
 .PHONY: docker-up
 docker-up:
-	@$(MAKE) $(RM_TARGET) $(START_TARGET)
+	@$(MAKE) $(RM_TARGET) $(START_TARGET) DOCKER_EXECUTOR_ID=$(DOCKER_EXECUTOR_ID)
 
 # Create the containers
 .PHONY: docker-create
-docker-create: display-executor-config docker-$(DOCKER_EXECUTOR)-create
+docker-create: $(DOCKER_EXECUTOR_ID_FILE) display-executor-config docker-$(DOCKER_EXECUTOR)-create
 	@true
 
 # Start the containers
@@ -792,7 +796,7 @@ docker-compose-start: .docker-compose-start
 .PHONY: docker-compose-wait
 docker-compose-wait: $(START_TARGET)
 	@$(ECHO) "Waiting for container $(CONTAINER_NAME)"
-	@$(COMPOSE_CMD) run --no-deps --rm $(WAIT_SERVICE_NAME) true
+	@$(COMPOSE_CMD) run --rm $(WAIT_SERVICE_NAME) true
 
 # Display running containers
 .PHONY: docker-compose-ps
