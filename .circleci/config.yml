@@ -25,12 +25,13 @@ jobs:
           command: |
             make create NAME=docker-sample-project
             if ! make create NAME=docker-sample-project; then
-              echo "INFO: The project was nat overwritten"
+              echo "INFO: The project was not overwritten"
             else
               echo "ERROR: The project was overwritten by mistake"
               exit 1
             fi
             make create NAME=docker-sample-project OVERWRITE=yes
+            echo "INFO: The project was successfully overwritten"
       - run:
           name: Docker Sample Project
           working_directory: ../docker-sample-project
