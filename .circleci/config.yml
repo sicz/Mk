@@ -24,7 +24,7 @@ jobs:
           name: Create Docker Sample Project
           command: |
             make create NAME=docker-sample-project
-            echo "SUCCESS: The project has been successfully created"
+            echo "SUCCESS: The project has been created"
             echo
             echo "################################################################################"
             echo
@@ -38,7 +38,7 @@ jobs:
             echo "################################################################################"
             echo
             make create NAME=docker-sample-project OVERWRITE=yes
-            echo "SUCCESS: The project has been overwritten successfully"
+            echo "SUCCESS: The project has been overwritten"
       - run:
           name: Build Docker Sample Project
           working_directory: docker-sample-project
