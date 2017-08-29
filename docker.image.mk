@@ -629,7 +629,7 @@ endif
 # Remove the containers and then run them fresh
 .PHONY: docker-up
 docker-up:
-	@$(MAKE) $(RM_TARGET) $(START_TARGET) DOCKER_EXECUTOR_ID=$(DOCKER_EXECUTOR_ID)
+	@$(MAKE) $(RM_TARGET) $(START_TARGET)
 
 # Create the containers
 .PHONY: docker-create
