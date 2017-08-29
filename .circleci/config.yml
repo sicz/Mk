@@ -1,0 +1,38 @@
+
+
+
+
+version: 2
+jobs:
+  build:
+    docker:
+      - image: sicz/dockerspec:latest
+    environment:
+      - MAKEFLAGS=--no-print-directory
+      - RSPEC_FORMAT=doc
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 17.06.0-ce
+      - run:
+          name: Remote Docker engine version and images
+          command: |
+            docker --version
+            docker-compose --version
+            docker image ls
+      - run:
+          name: Create sample Docker project
+          command: |
+            make create NAME=docker-sample-project
+            if ! make create NAME=docker-sample-project; then
+              echo "INFO: The project was nat overwritten"
+            else
+              echo "ERROR: The project was overwritten by mistake"
+              exit 1
+            fi
+            make create NAME=docker-sample-project OVERWRITE=yes
+      - run:
+          name: Docker Sample Project
+          working_directory: ../docker-sample-project
+          command: |
+            make ci
