@@ -10,6 +10,7 @@ jobs:
     environment:
       - MAKEFLAGS=--no-print-directory
       - RSPEC_FORMAT=doc
+    working_directory: Mk
     steps:
       - checkout
       - setup_remote_docker:
@@ -41,7 +42,7 @@ jobs:
             echo "SUCCESS: The project has been overwritten"
       - run:
           name: Build Docker Sample Project
-          working_directory: docker-sample-project
+          working_directory: ../docker-sample-project
           command: |
-            ln -s . ../Mk
+            ln -s ../Mk/.git .git
             make ci
