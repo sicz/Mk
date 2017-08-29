@@ -46,4 +46,4 @@ jobs:
           command: |
             ln -s ../Mk/.git .git
             make docker-pull
-            make ci
+            make ci-all
