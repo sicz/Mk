@@ -45,5 +45,5 @@ jobs:
           working_directory: ../docker-sample-project
           command: |
             ln -s ../Mk/.git .git
-            make docker-pull
+            make docker-pull-baseimage docker-pull-dependencies docker-pull-testimage
             make ci-all
