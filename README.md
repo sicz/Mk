@@ -1,6 +1,6 @@
 # A build tool for the Docker images
 
-[![CircleCI](https://circleci.com/gh/sicz/Mk.svg?style=svg&circle-token=d1b3c54fc08a17aca43ca02ad8ab8ecff230b417)](https://circleci.com/gh/sicz/Mk)
+[![CircleCI](https://circleci.com/gh/sicz/Mk.svg?style=shield&circle-token=d1b3c54fc08a17aca43ca02ad8ab8ecff230b417)](https://circleci.com/gh/sicz/Mk)
 
 **This project is not aimed at public consumption.
 It exists to support the development of SICZ containers.**
