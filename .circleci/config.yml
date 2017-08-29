@@ -10,6 +10,7 @@ jobs:
     environment:
       - MAKEFLAGS=--no-print-directory
       - RSPEC_FORMAT=doc
+    working_directory: /root/Mk
     steps:
       - checkout
       - setup_remote_docker:
