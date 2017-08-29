@@ -10,11 +10,13 @@ SAMPLE_PROJECT_VERSION	?= 0.0.1
 
 # TODO: Use real velues
 DOCKER_PROJECT		?= sicz
+DOCKER_PROJECT_DESC	?= Sample Docker image
+DOCKER_PROJECT_URL	?= https://github.com/sicz/Mk/tree/master/docker-sample-project
+
 DOCKER_NAME		?= sample-project
 DOCKER_IMAGE_TAG	?= $(SAMPLE_PROJECT_VERSION)
 DOCKER_IMAGE_TAGS	?= latest
-DOCKER_PROJECT_DESC	?= Sample Docker image
-DOCKER_PROJECT_URL	?= https://github.com/sicz/Mk/tree/master/docker-sample-project
+DOCKER_IMAGE_DEPENDENCIES += $(SIMPLE_CA_IMAGE)
 
 ### DOCKER_VERSIONS ############################################################
 
