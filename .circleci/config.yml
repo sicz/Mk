@@ -21,7 +21,7 @@ jobs:
             docker-compose --version
             docker image ls
       - run:
-          name: Create sample Docker project
+          name: Create Docker Sample Project
           command: |
             make create NAME=docker-sample-project
             echo "INFO: The project has been successfully created"
