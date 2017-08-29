@@ -31,10 +31,10 @@ jobs:
           working_directory: devel
           command: |
             make ci
-      # - deploy:
-      #     name: Push images to the Docker Hub
-      #     command: |
-      #       if [ "${CIRCLE_BRANCH}" == "master" ]; then
-      #         docker login -u ${DOCKER_HUB_USER} -p ${DOCKER_HUB_PASSWD}
-      #         make docker-push-all
-      #       fi
+      - deploy:
+          name: Push images to the Docker Hub
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+              docker login -u ${DOCKER_HUB_USER} -p ${DOCKER_HUB_PASSWD}
+              make docker-push-all
+            fi

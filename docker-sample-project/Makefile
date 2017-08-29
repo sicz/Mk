@@ -197,9 +197,7 @@ clean: docker-clean
 ### MK_DOCKER_IMAGE ############################################################
 
 PROJECT_DIR		?= $(CURDIR)
-# TODO: Use real path
-MK_DIR			?= $(PROJECT_DIR)/..
-# MK_DIR			?= $(PROJECT_DIR)/../Mk
+MK_DIR			?= $(PROJECT_DIR)/../Mk
 include $(MK_DIR)/docker.image.mk
 
 ################################################################################
