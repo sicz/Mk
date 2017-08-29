@@ -37,6 +37,6 @@ create:
 		exit 1; \
 	fi
 	@mkdir -p ../$(NAME)
-	cp -afv docker-sample-project/ ../$(NAME)
+	cp -afv docker-sample-project/. ../$(NAME)
 
 ################################################################################
