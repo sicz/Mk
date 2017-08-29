@@ -43,5 +43,5 @@ jobs:
           name: Build Docker Sample Project
           working_directory: docker-sample-project
           command: |
-            ln -s .. ../Mk
+            ln -s . ../Mk
             make ci
