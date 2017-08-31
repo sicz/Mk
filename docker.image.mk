@@ -127,8 +127,7 @@ DOCKER_EXECUTOR_ID	?= $(shell \
 				if [ -e $(DOCKER_EXECUTOR_ID_FILE) ]; then \
 					cat $(DOCKER_EXECUTOR_ID_FILE); \
 				else \
-					openssl rand -hex 4 | \
-					tee $(DOCKER_EXECUTOR_ID_FILE); \
+					openssl rand -hex 4; \
 				fi \
 			   )
 
