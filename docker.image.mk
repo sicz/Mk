@@ -796,7 +796,13 @@ docker-compose-start: .docker-compose-start
 .PHONY: docker-compose-wait
 docker-compose-wait: $(START_TARGET)
 	@$(ECHO) "Waiting for container $(CONTAINER_NAME)"
-	@$(COMPOSE_CMD) run --rm $(WAIT_SERVICE_NAME) true
+	@set +e; \
+	$(COMPOSE_CMD) run --rm $(WAIT_SERVICE_NAME) true; \
+	if [ $$? != 0 ]; then \
+		$(COMPOSE_CMD) logs $(COMPOSE_LOGS_OPTS); \
+		$(ECHO) "ERROR: Timeout has jast expired" >&2; \
+		exit 1; \
+	fi
 
 # Display running containers
 .PHONY: docker-compose-ps
