@@ -582,6 +582,12 @@ endif
 
 ### EXECUTOR_TARGETS ###########################################################
 
+.PHONY: display-version
+display-version:
+	@$(ECHO)
+	@$(ECHO) "===> $(DOCKER_IMAGE)"
+	@$(ECHO)
+
 # Save the Docker executor id
 $(DOCKER_EXECUTOR_ID_FILE):
 	@$(ECHO) $(DOCKER_EXECUTOR_ID) > $(DOCKER_EXECUTOR_ID_FILE)
@@ -963,12 +969,7 @@ define DOCKER_ALL_VERSIONS_TARGET
 $(1)-all:
 	@$(foreach DOCKER_VERSION,$(DOCKER_VERSIONS), \
 	 	cd $(abspath $(DOCKER_VARIANT_DIR))$(if $(filter $(DOCKER_VERSION),latest),,/$(DOCKER_VERSION)); \
-		$(ECHO); \
-		$(ECHO); \
-		$(ECHO) "===> $(DOCKER_IMAGE_NAME):$(DOCKER_VERSION)"; \
-		$(ECHO); \
-		$(ECHO); \
-		$(MAKE) $(1); \
+		$(MAKE) display-version $(1); \
 	 )
 endef
 $(foreach DOCKER_TARGET,$(DOCKER_ALL_VERSIONS_TARGETS),$(eval $(call DOCKER_ALL_VERSIONS_TARGET,$(DOCKER_TARGET))))
