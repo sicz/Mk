@@ -582,8 +582,9 @@ endif
 
 ### EXECUTOR_TARGETS ###########################################################
 
-.PHONY: display-version
-display-version:
+# Display the Docker image version
+.PHONY: display-version-header
+display-version-header:
 	@$(ECHO)
 	@$(ECHO) "===> $(DOCKER_IMAGE)"
 	@$(ECHO)
@@ -592,7 +593,7 @@ display-version:
 $(DOCKER_EXECUTOR_ID_FILE):
 	@$(ECHO) $(DOCKER_EXECUTOR_ID) > $(DOCKER_EXECUTOR_ID_FILE)
 
-# Display the name of the current configuration
+# Display the current configuration name
 .PHONY: display-executor-config
 display-executor-config:
 ifneq ($(DOCKER_CONFIGS),)
