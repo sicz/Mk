@@ -5,7 +5,7 @@
 **This project is not aimed at public consumption.
 It exists to support the development of SICZ containers.**
 
-Makefiles that support the development of the Docker images.
+Makefiles supporting Docker image development.
 
 ## Getting started
 
