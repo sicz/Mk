@@ -25,8 +25,8 @@ ifeq ($(GITHUB_URL),)
 $(error "Not a git repository (or any of the parent directories)")
 endif
 
-GITHUB_USER		?= $(shell basename $$(dirname $(GITHUB_URL)))
-GITHUB_REPOSITORY	?= $(shell basename $(GITHUB_URL))
+GITHUB_USER		?= $(notdir $(shell dirname $(GITHUB_URL)))
+GITHUB_REPOSITORY	?= $(notdir $(GITHUB_URL))
 
 # All modifications are commited
 ifeq ($(shell git status --porcelain),)
