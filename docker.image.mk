@@ -53,7 +53,7 @@ endif
 PROJECT_DIR		?= $(CURDIR)
 BUILD_DIR		?= $(PROJECT_DIR)
 TEST_DIR		?= $(BUILD_DIR)
-DOCKER_VARIANT_DIR	?= $(BUILD_DIR)
+VARIANT_DIR		?= $(BUILD_DIR)
 
 ### BASE_IMAGE #################################################################
 
@@ -76,7 +76,7 @@ DOCKER_IMAGE		?= $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)
 
 # Dockerfile name
 DOCKER_FILE		?= Dockerfile
-BUILD_DOCKER_FILE	?= $(abspath $(DOCKER_VARIANT_DIR)/$(DOCKER_FILE))
+BUILD_DOCKER_FILE	?= $(abspath $(VARIANT_DIR)/$(DOCKER_FILE))
 
 # Build image with tags
 BUILD_OPTS		+= --tag $(DOCKER_IMAGE) \
@@ -209,7 +209,7 @@ override COMPOSE_VARS	+= $(CONTAINER_VARS) \
 			   TEST_ENV_FILE \
 			   TEST_IMAGE \
 			   TEST_PROJECT_DIR \
-			   DOCKER_VARIANT_DIR
+			   VARIANT_DIR
 
 # Docker Compose command
 COMPOSE_CMD		?= touch $(TEST_ENV_FILE); \
@@ -250,7 +250,7 @@ override STACK_VARS	+= $(COMPOSE_VARS) \
 			   TEST_DIR \
 			   TEST_ENV_FILE \
 			   TEST_IMAGE \
-			   DOCKER_VARIANT_DIR
+			   VARIANT_DIR
 
 # TODO: Docker Swarm Stack executor
 
@@ -378,8 +378,7 @@ MAKE_VARS		?= GITHUB_MAKE_VARS \
 			   BUILD_MAKE_VARS \
 			   EXECUTOR_MAKE_VARS \
 			   SHELL_MAKE_VARS \
-			   DOCKER_REGISTRY_MAKE_VARS \
-			   DOCKER_VERSION_MAKE_VARS
+			   DOCKER_REGISTRY_MAKE_VARS
 
 define GITHUB_MAKE_VARS
 GITHUB_URL:		$(GITHUB_URL)
@@ -415,7 +414,8 @@ define BUILD_MAKE_VARS
 CURDIR:			$(CURDIR)
 PROJECT_DIR:		$(PROJECT_DIR)
 
-DOCKER_FILE		$(DOCKER_FILE)
+DOCKER_FILE:		$(DOCKER_FILE)
+VARIANT_DIR:		$(VARIANT_DIR)
 BUILD_DOCKER_FILE:	$(BUILD_DOCKER_FILE)
 BUILD_DIR:		$(BUILD_DIR)
 BUILD_VARS:		$(BUILD_VARS)
@@ -544,13 +544,6 @@ DOCKER_PULL_TAGS:	$(DOCKER_PULL_TAGS)
 DOCKER_IMAGE_DEPENDENCIES: $(DOCKER_IMAGE_DEPENDENCIES)
 endef
 export DOCKER_REGISTRY_MAKE_VARS
-
-define DOCKER_VERSION_MAKE_VARS
-DOCKER_VARIANT_DIR:	$(DOCKER_VARIANT_DIR)
-DOCKER_VERSIONS:	$(DOCKER_VERSIONS)
-DOCKER_ALL_VERSIONS_TARGETS: $(DOCKER_ALL_VERSIONS_TARGETS)
-endef
-export DOCKER_VERSION_MAKE_VARS
 
 ### BUILD_TARGETS ##############################################################
 
@@ -961,19 +954,6 @@ docker-pull-testimage:
 .PHONY: docker-push
 docker-push:
 	@$(foreach TAG,$(DOCKER_PUSH_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
-
-### DOCKER_ALL_VERSIONS_TARGETS ################################################
-
-# Create $(DOCKER_ALL_VERSIONS_TARGETS)-all targets
-define DOCKER_ALL_VERSIONS_TARGET
-.PHONY: $(1)-all
-$(1)-all:
-	@$(foreach DOCKER_VERSION,$(DOCKER_VERSIONS), \
-	 	cd $(abspath $(DOCKER_VARIANT_DIR))$(if $(filter $(DOCKER_VERSION),latest),,/$(DOCKER_VERSION)); \
-		$(MAKE) display-version $(1); \
-	 )
-endef
-$(foreach DOCKER_TARGET,$(DOCKER_ALL_VERSIONS_TARGETS),$(eval $(call DOCKER_ALL_VERSIONS_TARGET,$(DOCKER_TARGET))))
 
 ### CIRCLE_CI ##################################################################
 
