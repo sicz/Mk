@@ -54,7 +54,7 @@ PROJECT_DIR		?= $(CURDIR)
 BUILD_DIR		?= $(PROJECT_DIR)
 TEST_DIR		?= $(BUILD_DIR)
 VARIANT_DIR		?= $(BUILD_DIR)
-DOCKER_IMAGE_DEPOT	?= $(CURDIR)
+DOCKER_IMAGE_DEPOT	?= $(PROJECT_DIR)
 
 ### BASE_IMAGE #################################################################
 
@@ -684,7 +684,7 @@ docker-rm: docker-$(DOCKER_EXECUTOR)-rm
 # Remove all containers and work files
 .PHONY: docker-clean
 docker-clean: docker-stack-rm docker-compose-rm docker-container-rm
-	@rm -f .docker-*
+	@rm -f .docker-* $(DOCKER_IMAGE_DEPOT)/$(DOCKER_PROJECT)-$(DOCKER_NAME)-$(DOCKER_IMAGE_TAG).image
 	@find . -type f -name '*~' | xargs rm -f
 
 ### CONTAINER_EXECUTOR_TARGET ##################################################
