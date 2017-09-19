@@ -964,7 +964,7 @@ docker-load-image:
 # Save the project image to file
 .PHONY: docker-save-image
 docker-save-image:
-	@docker image save @$(foreach TAG,$(DOCKER_IMAGE_TAG) $(DOCKER_IMAGE_TAGS), $(DOCKER_IMAGE_NAME)/$(TAG)) | \
+	@docker image save $(foreach TAG,$(DOCKER_IMAGE_TAG) $(DOCKER_IMAGE_TAGS), $(DOCKER_IMAGE_NAME):$(TAG)) | \
 	gzip > $(DOCKER_IMAGE_DEPOT)/$(DOCKER_PROJECT)-$(DOCKER_NAME)-$(DOCKER_IMAGE_TAG).image
 
 ### CIRCLE_CI ##################################################################
