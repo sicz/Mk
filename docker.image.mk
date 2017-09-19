@@ -54,6 +54,7 @@ PROJECT_DIR		?= $(CURDIR)
 BUILD_DIR		?= $(PROJECT_DIR)
 TEST_DIR		?= $(BUILD_DIR)
 VARIANT_DIR		?= $(BUILD_DIR)
+DOCKER_IMAGE_DEPOT	?= $(CURDIR)
 
 ### BASE_IMAGE #################################################################
 
@@ -953,6 +954,18 @@ docker-pull-testimage:
 .PHONY: docker-push
 docker-push:
 	@$(foreach TAG,$(DOCKER_PUSH_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
+
+# Load the project image from file
+.PHONY: docker-load-image
+docker-load-image:
+	@cat $(DOCKER_IMAGE_DEPOT)/$(DOCKER_PROJECT)-$(DOCKER_NAME)-$(DOCKER_IMAGE_TAG).image | \
+	gunzip | docker image load
+
+# Save the project image to file
+.PHONY: docker-save-image
+docker-save-image:
+	@docker image save @$(foreach TAG,$(DOCKER_IMAGE_TAG) $(DOCKER_IMAGE_TAGS), $(DOCKER_IMAGE_NAME)/$(TAG)) | \
+	gzip > $(DOCKER_IMAGE_DEPOT)/$(DOCKER_PROJECT)-$(DOCKER_NAME)-$(DOCKER_IMAGE_TAG).image
 
 ### CIRCLE_CI ##################################################################
 
