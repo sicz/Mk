@@ -19,7 +19,22 @@ LABEL \
   org.label-schema.vcs-ref="${VCS_REF}" \
   org.label-schema.build-date="${BUILD_DATE}"
 
-# COPY config /
-
-# TODO: Use real command
-ENV DOCKER_COMMAND="/bin/bash"
+# ARG MY_VERSION
+# ARG MY_PATH="..."
+#
+# ENV \
+#   DOCKER_USER="..." \
+#   DOCKER_COMMAND="..." \
+#   MY_PATH=${MY_PATH} \
+#   MY_VERSION=${MY_VERSION} \
+#   PATH=${MY_PATH}/bin:${PATH}
+#
+# RUN set -exo pipefail; \
+#   ...
+#
+# COPY rootfs /
+#
+# RUN set -exo pipefail; \
+#   ...
+#
+# CMD["--option"]
