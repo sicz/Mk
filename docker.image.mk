@@ -955,12 +955,6 @@ docker-pull-testimage:
 docker-push:
 	@$(foreach TAG,$(DOCKER_PUSH_TAGS),docker push $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(TAG);echo;)
 
-# Load the base image from file
-.PHONY: docker-load-baseimage
-docker-load-baseimage:
-	cat $(DOCKER_IMAGE_DEPOT)/$(shell echo $(BASE_IMAGE) | sed -E "s/[^[:alnum:].]/-/g").image | \
-	gunzip | docker image load
-
 # Load the project image from file
 .PHONY: docker-load-image
 docker-load-image:
