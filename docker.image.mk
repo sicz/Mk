@@ -333,9 +333,6 @@ DOCKER_REGISTRY		?= docker.io
 DOCKER_PUSH_TAGS	?= $(DOCKER_IMAGE_TAG) $(DOCKER_IMAGE_TAGS)
 DOCKER_PULL_TAGS	?= $(DOCKER_PUSH_TAGS)
 
-# Docker image dependencies
-DOCKER_IMAGE_DEPENDENCIES += $(BASE_IMAGE)
-
 ### DOCKER_VERSION #############################################################
 
 # Make targets propagated to all Docker image versions
@@ -935,9 +932,14 @@ docker-stack-rm:
 docker-pull: docker-pull-dependencies docker-pull-image docker-pull-testimage
 	@true
 
+# Pull project base image from the Docker registry
+.PHONY: docker-pull-baseimage
+docker-pull-baseimage:
+	@docker pull $(BASE_IMAGE)
+
 # Pull the project image dependencies from the Docker registry
 .PHONY: docker-pull-dependencies
-docker-pull-dependencies:
+docker-pull-dependencies: docker-pull-baseimage
 	@$(foreach DOCKER_IMAGE,$(DOCKER_IMAGE_DEPENDENCIES),docker pull $(DOCKER_IMAGE);echo;)
 
 # Pull the project image from the Docker registry
