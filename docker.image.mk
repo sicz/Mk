@@ -93,7 +93,6 @@ BUILD_OPTS		+= $(foreach VAR,$(BUILD_VARS),--build-arg "$(VAR)=$($(VAR))")
 override BUILD_VARS	+= BASE_IMAGE \
 			   BASE_IMAGE_NAME \
 			   BASE_IMAGE_TAG \
-			   BUILD_DATE \
 			   DOCKER_IMAGE \
 			   DOCKER_IMAGE_NAME \
 			   DOCKER_IMAGE_TAG \
@@ -104,8 +103,7 @@ override BUILD_VARS	+= BASE_IMAGE \
 			   DOCKER_REGISTRY \
 			   GITHUB_REPOSITORY \
 			   GITHUB_URL \
-			   GITHUB_USER \
-			   VCS_REF
+			   GITHUB_USER
 
 #### DOCKER_EXECUTOR ###########################################################
 
