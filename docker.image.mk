@@ -560,9 +560,11 @@ docker-build:
 		LABEL_CREATED="org.opencontainers.image.created=$(BUILD_DATE)"; \
 		LABEL_REVISION="org.opencontainers.image.revision=$(VCS_REF)"; \
 		docker build $(BUILD_OPTS) --label $${LABEL_CREATED} --label $${LABEL_REVISION} -f $(BUILD_DOCKER_FILE) $(BUILD_DIR) > /dev/null; \
+		docker inspect $(DOCKER_IMAGE) > inspect.new; \
 		$(ECHO) "Successfully labeled $${LABEL_CREATED}"; \
 		$(ECHO) "Successfully labeled $${LABEL_REVISION}"; \
-	fi
+	fi; \
+	$(ECHO) "Image `docker inspect --format '{{.Id}}' $(DOCKER_IMAGE)`"
 
 # Build a new image without using the Docker layer caching
 .PHONY: docker-rebuild
@@ -573,7 +575,8 @@ docker-rebuild:
 	LABEL_REVISION="org.opencontainers.image.revision=$(VCS_REF)"; \
 	docker build $(BUILD_OPTS) --label $${LABEL_CREATED} --label $${LABEL_REVISION} -f $(BUILD_DOCKER_FILE) --no-cache $(BUILD_DIR); \
 	$(ECHO) "Successfully labeled $${LABEL_CREATED}"; \
-	$(ECHO) "Successfully labeled $${LABEL_REVISION}"
+	$(ECHO) "Successfully labeled $${LABEL_REVISION}"; \
+	$(ECHO) "Image `docker inspect --format '{{.Id}}' $(DOCKER_IMAGE)`"
 
 # Tag the Docker image
 .PHONY: docker-tag
