@@ -568,7 +568,7 @@ docker-build:
 .PHONY: docker-rebuild
 docker-rebuild:
 	@set -eo pipefail; \
-	$(ECHO) "Rebuilding image $(DOCKER_IMAGE)"
+	$(ECHO) "Rebuilding image $(DOCKER_IMAGE)"; \
 	LABEL_CREATED="org.opencontainers.image.created=$(BUILD_DATE)"; \
 	LABEL_REVISION="org.opencontainers.image.revision=$(VCS_REF)"; \
 	docker build $(BUILD_OPTS) --label $${LABEL_CREATED} --label $${LABEL_REVISION} -f $(BUILD_DOCKER_FILE) --no-cache $(BUILD_DIR); \
