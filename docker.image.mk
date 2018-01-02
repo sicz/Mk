@@ -557,7 +557,7 @@ docker-build:
 docker-rebuild:
 	@$(ECHO) "Build date $(BUILD_DATE)"
 	@$(ECHO) "Git revision $(VCS_REF)"
-	@$(ECHO) "Rebilding image $(DOCKER_IMAGE)"
+	@$(ECHO) "Rebuilding image $(DOCKER_IMAGE)"
 	@docker build $(BUILD_OPTS) -f $(BUILD_DOCKER_FILE) --no-cache $(BUILD_DIR)
 
 # Tag the Docker image
