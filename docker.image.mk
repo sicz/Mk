@@ -559,18 +559,12 @@ docker-build:
 	$(ECHO) "Building image $(DOCKER_IMAGE)"; \
 	docker build $(BUILD_OPTS) -f $(BUILD_DOCKER_FILE) $(BUILD_DIR); \
 	BUILD_ID="`docker inspect --format '{{.Id}}' $(DOCKER_IMAGE)`"; \
-	LABEL_CREATED="org.opencontainers.image.created=$(BUILD_DATE)"; \
-	LABEL_REVISION="org.opencontainers.image.revision=$(GIT_REVISION)"; \
 	if [ -n "$(DOCKER_IMAGE_ID)" -a "$(DOCKER_IMAGE_ID)" != "$${BUILD_ID}" ]; then \
+		$(ECHO) "Image changed, building with current labels"; \
 		docker build $(BUILD_OPTS) \
-			--label $${LABEL_CREATED} \
-			--label $${LABEL_REVISION} \
-			-f $(BUILD_DOCKER_FILE) $(BUILD_DIR) | \
-		grep "Successfully"; \
-	fi; \
-	if [ "$(DOCKER_IMAGE_ID)" != "$${BUILD_ID}" ]; then \
-		$(ECHO) "Successfully labeled $${LABEL_REVISION}"; \
-		$(ECHO) "Successfully labeled $${LABEL_CREATED}"; \
+			--label org.opencontainers.image.created=$(BUILD_DATE) \
+			--label org.opencontainers.image.revision=$(GIT_REVISION) \
+			-f $(BUILD_DOCKER_FILE) $(BUILD_DIR); \
 	fi
 
 # Build a new image without using the Docker layer caching
@@ -578,14 +572,10 @@ docker-build:
 docker-rebuild:
 	@set -eo pipefail; \
 	$(ECHO) "Rebuilding image $(DOCKER_IMAGE)"; \
-	LABEL_CREATED="org.opencontainers.image.created=$(BUILD_DATE)"; \
-	LABEL_REVISION="org.opencontainers.image.revision=$(GIT_REVISION)"; \
 	docker build $(BUILD_OPTS) \
-		--label $${LABEL_CREATED} \
-		--label $${LABEL_REVISION} \
-		-f $(BUILD_DOCKER_FILE) --no-cache $(BUILD_DIR); \
-	$(ECHO) "Successfully labeled $${LABEL_REVISION}"; \
-	$(ECHO) "Successfully labeled $${LABEL_CREATED}"
+		--label org.opencontainers.image.created=$(BUILD_DATE) \
+		--label org.opencontainers.image.revision=$(GIT_REVISION) \
+		-f $(BUILD_DOCKER_FILE) --no-cache $(BUILD_DIR)
 
 # Tag the Docker image
 .PHONY: docker-tag
