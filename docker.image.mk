@@ -30,11 +30,10 @@ GITHUB_REPOSITORY	?= $(notdir $(GITHUB_URL))
 
 # All modifications are commited
 ifeq ($(shell git status --porcelain),)
-VCS_REF			?= $(shell git rev-parse --short HEAD)
-
+GIT_REVISION		?= $(shell git rev-parse --short HEAD)
 # Modifications are not commited
 else
-VCS_REF			?= $(shell git rev-parse --short HEAD)-devel
+GIT_REVISION		?= $(shell git rev-parse --short HEAD)-devel
 endif
 
 # Build date
@@ -89,7 +88,7 @@ DOCKER_IMAGE_REVISION	= $(shell docker inspect --format '{{index .Config.Labels 
 BUILD_OPTS		+= --cache-from $(DOCKER_IMAGE)
 else
 DOCKER_IMAGE_CREATED	= $(BUILD_DATE)
-DOCKER_IMAGE_REVISION	= $(VCS_REF)
+DOCKER_IMAGE_REVISION	= $(GIT_REVISION)
 endif
 BUILD_OPTS		+= --label org.opencontainers.image.created=$(DOCKER_IMAGE_CREATED) \
 			   --label org.opencontainers.image.revision=$(DOCKER_IMAGE_REVISION)
@@ -393,7 +392,7 @@ GITHUB_USER:		$(GITHUB_USER)
 GITHUB_REPOSITORY:	$(GITHUB_REPOSITORY)
 
 BUILD_DATE:		$(BUILD_DATE)
-VCS_REF:		$(VCS_REF)
+GIT_REVISION:		$(GIT_REVISION)
 endef
 export GITHUB_MAKE_VARS
 
@@ -561,7 +560,7 @@ docker-build:
 	docker build $(BUILD_OPTS) -f $(BUILD_DOCKER_FILE) $(BUILD_DIR); \
 	BUILD_ID="`docker inspect --format '{{.Id}}' $(DOCKER_IMAGE)`"; \
 	LABEL_CREATED="org.opencontainers.image.created=$(BUILD_DATE)"; \
-	LABEL_REVISION="org.opencontainers.image.revision=$(VCS_REF)"; \
+	LABEL_REVISION="org.opencontainers.image.revision=$(GIT_REVISION)"; \
 	if [ -n "$(DOCKER_IMAGE_ID)" -a "$(DOCKER_IMAGE_ID)" != "$${BUILD_ID}" ]; then \
 		docker build $(BUILD_OPTS) \
 			--label $${LABEL_CREATED} \
@@ -580,7 +579,7 @@ docker-rebuild:
 	@set -eo pipefail; \
 	$(ECHO) "Rebuilding image $(DOCKER_IMAGE)"; \
 	LABEL_CREATED="org.opencontainers.image.created=$(BUILD_DATE)"; \
-	LABEL_REVISION="org.opencontainers.image.revision=$(VCS_REF)"; \
+	LABEL_REVISION="org.opencontainers.image.revision=$(GIT_REVISION)"; \
 	docker build $(BUILD_OPTS) \
 		--label $${LABEL_CREATED} \
 		--label $${LABEL_REVISION} \
