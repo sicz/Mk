@@ -81,6 +81,19 @@ BUILD_OPTS		+= --tag $(DOCKER_IMAGE) \
 			   --label org.opencontainers.image.url="$(DOCKER_PROJECT_URL)" \
 			   --label org.opencontainers.image.source="$(GITHUB_URL)"
 
+# Docker Layer Caching
+DOCKER_IMAGE_ID		= $(shell docker inspect --format '{{.Id}}' $(DOCKER_IMAGE) 2> /dev/null)
+ifneq ($(DOCKER_IMAGE_ID),)
+DOCKER_IMAGE_CREATED	= $(shell docker inspect --format '{{index .Config.Labels "org.opencontainers.image.created"}}' $(DOCKER_IMAGE))
+DOCKER_IMAGE_REVISION	= $(shell docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' $(DOCKER_IMAGE))
+BUILD_OPTS		+= --cache-from $(DOCKER_IMAGE)
+else
+DOCKER_IMAGE_CREATED	= $(BUILD_DATE)
+DOCKER_IMAGE_REVISION	= $(VCS_REF)
+endif
+BUILD_OPTS		+= --label org.opencontainers.image.created=$(DOCKER_IMAGE_CREATED) \
+			   --label org.opencontainers.image.revision=$(DOCKER_IMAGE_REVISION)
+
 # Use http proxy when building the image
 ifdef HTTP_PROXY
 BUILD_OPTS		+= --build-arg HTTP_PROXY=$(http_proxy)
@@ -544,25 +557,22 @@ export DOCKER_REGISTRY_MAKE_VARS
 .PHONY: docker-build
 docker-build:
 	@set -eo pipefail; \
-	IMAGE_ID="`docker inspect --format '{{.Id}}' $(DOCKER_IMAGE)`"; \
-	LABEL_CREATED="`docker inspect --format '{{index .Config.Labels "org.opencontainers.image.created"}}' $(DOCKER_IMAGE)`"; \
-	LABEL_CREATED="org.opencontainers.image.created=$${LABEL_CREATED:-$(BUILD_DATE)}"; \
-	LABEL_REVISION="`docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' $(DOCKER_IMAGE)`"; \
-	LABEL_REVISION="org.opencontainers.image.revision=$${LABEL_REVISION:-$(VCS_REF)}"; \
-	$(ECHO) "Image label $${LABEL_CREATED}"; \
-	$(ECHO) "Image label $${LABEL_REVISION}"; \
 	$(ECHO) "Building image $(DOCKER_IMAGE)"; \
-	docker build $(BUILD_OPTS) --label $${LABEL_CREATED} --label $${LABEL_REVISION} -f $(BUILD_DOCKER_FILE) $(BUILD_DIR); \
+	docker build $(BUILD_OPTS) -f $(BUILD_DOCKER_FILE) $(BUILD_DIR); \
 	BUILD_ID="`docker inspect --format '{{.Id}}' $(DOCKER_IMAGE)`"; \
-	if [ "$${IMAGE_ID}" != "$${BUILD_ID}" ]; then \
-		LABEL_CREATED="org.opencontainers.image.created=$(BUILD_DATE)"; \
-		LABEL_REVISION="org.opencontainers.image.revision=$(VCS_REF)"; \
-		docker build $(BUILD_OPTS) --label $${LABEL_CREATED} --label $${LABEL_REVISION} -f $(BUILD_DOCKER_FILE) $(BUILD_DIR) > /dev/null; \
-		docker inspect $(DOCKER_IMAGE) > inspect.new; \
-		$(ECHO) "Successfully labeled $${LABEL_CREATED}"; \
-		$(ECHO) "Successfully labeled $${LABEL_REVISION}"; \
+	LABEL_CREATED="org.opencontainers.image.created=$(BUILD_DATE)"; \
+	LABEL_REVISION="org.opencontainers.image.revision=$(VCS_REF)"; \
+	if [ -n "$(DOCKER_IMAGE_ID)" -a "$(DOCKER_IMAGE_ID)" != "$${BUILD_ID}" ]; then \
+		docker build $(BUILD_OPTS) \
+			--label $${LABEL_CREATED} \
+			--label $${LABEL_REVISION} \
+			-f $(BUILD_DOCKER_FILE) $(BUILD_DIR) | \
+		grep "Successfully"; \
 	fi; \
-	$(ECHO) "Image `docker inspect --format '{{.Id}}' $(DOCKER_IMAGE)`"
+	if [ "$(DOCKER_IMAGE_ID)" != "$${BUILD_ID}" ]; then \
+		$(ECHO) "Successfully labeled $${LABEL_REVISION}"; \
+		$(ECHO) "Successfully labeled $${LABEL_CREATED}"; \
+	fi
 
 # Build a new image without using the Docker layer caching
 .PHONY: docker-rebuild
@@ -571,10 +581,12 @@ docker-rebuild:
 	$(ECHO) "Rebuilding image $(DOCKER_IMAGE)"; \
 	LABEL_CREATED="org.opencontainers.image.created=$(BUILD_DATE)"; \
 	LABEL_REVISION="org.opencontainers.image.revision=$(VCS_REF)"; \
-	docker build $(BUILD_OPTS) --label $${LABEL_CREATED} --label $${LABEL_REVISION} -f $(BUILD_DOCKER_FILE) --no-cache $(BUILD_DIR); \
-	$(ECHO) "Successfully labeled $${LABEL_CREATED}"; \
+	docker build $(BUILD_OPTS) \
+		--label $${LABEL_CREATED} \
+		--label $${LABEL_REVISION} \
+		-f $(BUILD_DOCKER_FILE) --no-cache $(BUILD_DIR); \
 	$(ECHO) "Successfully labeled $${LABEL_REVISION}"; \
-	$(ECHO) "Image `docker inspect --format '{{.Id}}' $(DOCKER_IMAGE)`"
+	$(ECHO) "Successfully labeled $${LABEL_CREATED}"
 
 # Tag the Docker image
 .PHONY: docker-tag
