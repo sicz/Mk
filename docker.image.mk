@@ -956,7 +956,7 @@ docker-pull-baseimage:
 
 # Pull the project image dependencies from the Docker registry
 .PHONY: docker-pull-dependencies
-docker-pull-dependencies: docker-pull-baseimage
+docker-pull-dependencies:
 	@$(foreach DOCKER_IMAGE,$(DOCKER_IMAGE_DEPENDENCIES),docker pull $(DOCKER_IMAGE);echo;)
 
 # Pull the project image from the Docker registry
