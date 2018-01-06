@@ -109,12 +109,7 @@ run up: docker-up
 
 # Create the containers
 .PHONY: create
-create: docker-create .docker-$(DOCKER_EXECUTOR)-create-www
-
-.docker-$(DOCKER_EXECUTOR)-create-www:
-	@$(ECHO) "Copying spec/fixtures/www to $(CONTAINER_NAME):/var/www"
-	@docker cp $(TEST_DIR)/spec/fixtures/www/index.html $(CONTAINER_NAME):/var/www
-	@$(ECHO) $(CONTAINER_NAME) > $@
+create: docker-create
 
 # Start the containers
 .PHONY: start

@@ -33,6 +33,7 @@ jobs:
           name: Build Docker Sample Project
           working_directory: docker-sample-project
           command: |
+            ln -s . ../Mk
             make config-file
             make vars
             make docker-pull-baseimage docker-pull-dependencies docker-pull-testimage
