@@ -1,26 +1,15 @@
-
-
-
-
 version: 2
 jobs:
   build:
     docker:
-      - image: sicz/dockerspec@sha256:2a44668c827a7680a78349fda3e051b8549a4dc9a663b2444fbad69e68109213
+      - image: sicz/dockerspec
     environment:
       - MAKEFLAGS=--no-print-directory
       - RSPEC_FORMAT=doc
-    working_directory: Mk
     steps:
       - checkout
       - setup_remote_docker:
           version: 17.06.0-ce
-      - run:
-          name: Remote Docker engine version and images
-          command: |
-            docker --version
-            docker-compose --version
-            docker image ls
       - run:
           name: Create Docker Sample Project
           command: |
@@ -42,10 +31,9 @@ jobs:
             echo "SUCCESS: The project has been overwritten"
       - run:
           name: Build Docker Sample Project
-          working_directory: ../docker-sample-project
+          working_directory: docker-sample-project
           command: |
-            ln -s ../Mk/.git .git
             make config-file
             make vars
-            make docker-pull-dependencies docker-pull-testimage
-            make ci-all
+            make docker-pull-baseimage docker-pull-dependencies docker-pull-testimage
+            make ci

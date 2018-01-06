@@ -5,6 +5,3 @@
 
 # Info about running containers
 .docker-*
-
-# Simple CA secrets
-secrets

@@ -344,7 +344,6 @@ DOCKER_PULL_TAGS	?= $(DOCKER_PUSH_TAGS)
 ### DOCKER_VERSION #############################################################
 
 # Make targets propagated to all Docker image versions
-DOCKER_VERSIONS		?= latest
 DOCKER_ALL_VERSIONS_TARGETS += docker-pull \
 			   docker-pull-image \
 			   docker-pull-dependencies \

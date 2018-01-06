@@ -8,33 +8,30 @@ jobs:
       - RSPEC_FORMAT=doc
     steps:
       - checkout
-      - setup_remote_docker:
-          version: 17.06.0-ce
-      - run:
-          name: Remote Docker engine version and images
-          command: |
-            docker --version
-            docker-compose --version
-            docker image ls
       - run:
           name: Checkout make files
           command: |
             cd ..
             curl -sSL https://github.com/SICZ/Mk/archive/master.tar.gz | tar -xzf -
             mv Mk-master Mk
+      - setup_remote_docker:
+          version: 17.06.0-ce
+      - run:
+          name: Pull Docker images
+          command: |
+            make docker-pull-baseimage
+            make docker-pull-image || true
+            make docker-pull-dependencies
+            make docker-pull-testimage
       - run:
           name: sicz/sample-project:latest
-          command: |
-            make ci
-      - run:
-          name: sicz/sample-project:devel
-          working_directory: devel
           command: |
             make ci
       - deploy:
           name: Push images to the Docker Hub
           command: |
-            if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              docker login -u ${DOCKER_HUB_USER} -p ${DOCKER_HUB_PASSWD}
-              make docker-push-all
-            fi
+            # TODO:
+            # if [ "${CIRCLE_BRANCH}" == "master" ]; then
+            #   docker login -u ${DOCKER_HUB_USER} -p ${DOCKER_HUB_PASSWD}
+            #   make docker-push-all
+            # fi

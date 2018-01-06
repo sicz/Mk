@@ -10,7 +10,7 @@ networks:
 services:
   sample_project:
     image: ${DOCKER_IMAGE}
-    # TODO: use real command
+    # TODO: use real command or nothing
     # Listen on TCP port 7 (Echo Protocol) and mirror input to output
     command: /usr/bin/ncat -l 7 -k -c /bin/cat
     depends_on:
@@ -19,12 +19,7 @@ services:
       - DOCKER_ENTRYPOINT_DEBUG=true
       - DOCKER_ENTRYPOINT_INFO=true
       - SERVER_CRT_HOST=${SERVER_CRT_HOST}
-      - SERVER_KEY_PWD_FILE=/etc/ssl/private/server.pwd
       - SIMPLE_CA_URL=https://simple-ca.local
-    expose:
-      - 7/tcp
-    #   - 80/tcp
-    #   - 443/tcp
     networks:
       default:
         aliases:
@@ -58,12 +53,9 @@ services:
     environment:
       - DOCKER_ENTRYPOINT_DEBUG=true
       - DOCKER_ENTRYPOINT_INFO=true
+      # TODO: Use a real URL
       - WAIT_FOR_TCP=sample-project.local:7
-      # - WAIT_FOR_URL=http://sample-project.local https://sample-project.local
-    networks:
-      default:
-        aliases:
-          - test.local
+      # - WAIT_FOR_URL=https://sample-project.local
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - simple_ca_secrets:/run/secrets:ro
@@ -78,12 +70,9 @@ services:
     environment:
       - DOCKER_ENTRYPOINT_DEBUG=true
       - DOCKER_ENTRYPOINT_INFO=true
+      # TODO: Use a real URL
       - WAIT_FOR_TCP=sample-project.local:7
       # - WAIT_FOR_URL=http://sample-project.local https://sample-project.local
-    networks:
-      default:
-        aliases:
-          - wait.local
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - simple_ca_secrets:/run/secrets:ro

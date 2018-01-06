@@ -74,7 +74,7 @@ describe "Docker image", :test => :docker_image do
         it { is_expected.to be_grouped_into(group) } unless group.nil?
         its(:sha256sum) do
           is_expected.to eq(
-              Digest::SHA256.file("config/#{subject.name}").to_s
+              Digest::SHA256.file("rootfs/#{subject.name}").to_s
           )
         end if expectations.include?(:eq_sha256sum)
       end
