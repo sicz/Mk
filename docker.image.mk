@@ -792,7 +792,7 @@ docker-compose-create: .docker-compose-create
 
 .docker-compose-create:
 	@cd $(PROJECT_DIR) && \
-	 $(COMPOSE_CMD) create $(COMPOSE_CREATE_OPTS) $(COMPOSE_SERVICE_NAME)
+	 $(COMPOSE_CMD) up --no-start $(COMPOSE_CREATE_OPTS) $(COMPOSE_SERVICE_NAME)
 	@$(ECHO) $(COMPOSE_SERVICE_NAME) > $@
 
 # Start the containers
@@ -844,7 +844,7 @@ docker-compose-test: $(START_TARGET) .docker-compose-test
 	@$(ECHO) "Creating container $(TEST_CONTAINER_NAME)"
 	@rm -f $(TEST_ENV_FILE)
 	@$(foreach VAR,$(TEST_COMPOSE_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);)
-	@$(COMPOSE_CMD) create --no-build $(TEST_SERVICE_NAME)
+	@$(COMPOSE_CMD) up --no-start --no-build $(TEST_SERVICE_NAME)
 # Copy the project dir to the test container if the Docker host is remote
 ifeq ($(TEST_PROJECT_DIR),)
 	@$(ECHO) "Copying project to container $(TEST_CONTAINER_NAME)"
