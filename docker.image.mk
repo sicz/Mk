@@ -243,7 +243,6 @@ else
 STACK_FILE		?= $(abspath $(PROJECT_DIR)/docker-stack.$(DOCKER_CONFIG).yml)
 endif
 
-
 # Docker Stack project name
 STACK_NAME		?= $(DOCKER_EXECUTOR_ID)
 
@@ -251,7 +250,7 @@ STACK_NAME		?= $(DOCKER_EXECUTOR_ID)
 STACK_SERVICE_NAME	?= $(SERVICE_NAME)
 
 # Variables used in the Docker Stack file
-override STACK_VARS	+= $(COMPOSE_VARS) \
+override STACK_VARS	+= $(STACK_VARS) \
 			   $(TEST_VARS) \
 			   PROJECT_DIR \
 			   BUILD_DIR \
@@ -812,7 +811,7 @@ docker-compose-wait: $(START_TARGET)
 	$(COMPOSE_CMD) run --rm $(WAIT_SERVICE_NAME) true; \
 	if [ $$? != 0 ]; then \
 		$(COMPOSE_CMD) logs $(COMPOSE_LOGS_OPTS); \
-		$(ECHO) "ERROR: Timeout has jast expired" >&2; \
+		$(ECHO) "ERROR: Timeout has just expired" >&2; \
 		exit 1; \
 	fi
 
