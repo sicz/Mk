@@ -836,7 +836,12 @@ docker-compose-logs-tail:
 
 # Run the tests
 .PHONY: docker-compose-test
-docker-compose-test: $(START_TARGET)
+docker-compose-test: $(START_TARGET) .docker-compose-test
+	@$(ECHO) "Running tests in container $(TEST_CONTAINER_NAME)"
+	@$(COMPOSE_CMD) run --rm $(TEST_SERVICE_NAME) $(TEST_CMD)
+
+.docker-compose-test:
+	@$(ECHO) "Creating container $(TEST_CONTAINER_NAME)"
 	@rm -f $(TEST_ENV_FILE)
 	@$(foreach VAR,$(TEST_COMPOSE_VARS),echo "$(VAR)=$($(VAR))" >> $(TEST_ENV_FILE);)
 	@$(COMPOSE_CMD) create --no-build $(TEST_SERVICE_NAME)
@@ -844,13 +849,8 @@ docker-compose-test: $(START_TARGET)
 ifeq ($(TEST_PROJECT_DIR),)
 	@$(ECHO) "Copying project to container $(TEST_CONTAINER_NAME)"
 	@docker cp $(PROJECT_DIR) $(TEST_CONTAINER_NAME):$(dir $(PROJECT_DIR))
-	@$(ECHO) "Starting container $(TEST_CONTAINER_NAME)"
-	@docker start --attach --interactive $(TEST_CONTAINER_NAME)
-# Use the project dir as the host volume if Docker host is local
-else
-	@$(ECHO) "Running container $(TEST_CONTAINER_NAME)"
-	@$(COMPOSE_CMD) run --rm $(TEST_SERVICE_NAME) $(TEST_CMD)
 endif
+	@echo $(TEST_SERVICE_NAME) > $@
 
 # Stop the containers
 .PHONY: docker-compose-stop
