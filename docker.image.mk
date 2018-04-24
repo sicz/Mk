@@ -324,7 +324,7 @@ CIRCLECI_CONFIG_FILE	?= $(PROJECT_DIR)/.circleci/config.yml
 
 # Docker shell options and command
 SHELL_OPTS		+= --interactive --tty
-SHELL_CMD		?= /docker-entrypoint.sh /bin/bash
+SHELL_CMD		?= /docker-entrypoint.sh /bin/bash --login
 
 # Run the shell as an user
 ifdef CONTAINER_USER
