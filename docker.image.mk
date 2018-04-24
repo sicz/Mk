@@ -313,7 +313,7 @@ override SPEC_OPTS	+= --format $(RSPEC_FORMAT)
 endif
 
 # Allow RSpec colorized output without allocated tty
-ifeq ($(TEST_PROJECT_DIR),)
+ifeq ($(DOCKER_HOST),)
 override SPEC_OPTS	+= --tty
 endif
 
